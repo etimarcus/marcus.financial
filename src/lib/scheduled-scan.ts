@@ -126,24 +126,31 @@ Start now.`,
 
 Research query: ${query || "Top US equities with unusual volume and RSI < 30 on the daily timeframe"}
 
-You're running an on-demand research task using Finviz-style screening via web_search. Do NOT propose trades. Save the findings as a single research_report via save_insight.
+You're running an on-demand research task using the finviz_screen tool, which hits Finviz's direct CSV export endpoint. Do NOT propose trades. Save the findings as a single research_report via save_insight.
 
 Process:
-1. Use web_search to find Finviz screener results matching the query. Examples: "finviz screener <query>", or more targeted searches on finviz.com for the specific criteria.
-2. Identify the top 5-10 tickers surfaced.
-3. For the top 3-5 most interesting, pull calculate_indicators (1Day, 250 lookback) and get_news (3 articles) to add context.
+1. Translate the user's query into Finviz filter codes and call finviz_screen with them. Common filters:
+   - Market cap: cap_micro (< 300M), cap_small (300M-2B), cap_smallover (> 300M), cap_midover (> 2B), cap_largeover (> 10B), cap_megaover (> 200B)
+   - Volume: sh_avgvol_o500 (> 500K), sh_avgvol_o1000 (> 1M), sh_curvol_o1000 (current > 1M), sh_relvol_o2 (relvol > 2x)
+   - Technicals: ta_rsi_os30 (RSI < 30), ta_rsi_ob70 (RSI > 70), ta_highlow52w_nh (new 52w high), ta_highlow52w_nl (new 52w low), ta_sma200_pa (price > SMA200), ta_sma50_pa50 (price > SMA50)
+   - Performance: ta_perf_1wup (up 1w), ta_perf_4wdown (down 4w), ta_perf_ytd20p (YTD > 20%)
+   - Fundamentals: fa_pe_u15 (P/E < 15), fa_div_o1 (dividend > 1%), fa_eps5years_o10 (EPS 5y > 10%)
+   - Geography/sector: geo_usa, sec_technology, sec_healthcare, sec_energy, etc.
+   If you don't know the exact code, start with something reasonable and call finviz_screen — the tool returns a structured list you can use even if the filter was broad.
+2. From the returned rows, pick the top 3-5 most interesting tickers.
+3. For each, call calculate_indicators (1Day, 250 lookback) and get_news (3 articles) to add your own verification on top of Finviz's data.
 4. Write a SINGLE save_insight call with:
    - source: 'finviz'
    - kind: 'research_report'
    - title: terse report title reflecting the query
    - body: a markdown report with these sections:
-     * Summary of the screening criteria
-     * Results table or list
-     * Per-ticker: 2-4 sentence analysis with the key numbers (price, RSI, recent news)
+     * Summary of the screening criteria (state the exact filter string you used and the number of matches)
+     * Results table or bullet list with the top tickers, their price, change, volume, sector
+     * Per-ticker analysis: 2-4 sentences with RSI/MACD values, recent news, and your read
      * Conclusion / recommended next steps (e.g. "these 2 worth adding to the watchlist", "none compelling")
    - symbols: [array of tickers analyzed]
-5. Do NOT call propose_trade. This is research, not execution.
-6. Finish with a one-sentence text summary of what you produced.
+5. Do NOT call propose_trade. This is research.
+6. Finish with a one-sentence text summary.
 
 Start now.`,
   },

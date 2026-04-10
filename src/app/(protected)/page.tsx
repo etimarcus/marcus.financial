@@ -227,7 +227,7 @@ export default async function Dashboard() {
                   const plNum = Number(p.unrealized_pl);
                   const plPct = Number(p.unrealized_plpc);
                   const tone =
-                    plNum >= 0 ? "text-emerald-400" : "text-red-400";
+                    plNum >= 0 ? "text-profit" : "text-loss";
                   return (
                     <tr
                       key={p.symbol}
@@ -289,9 +289,9 @@ function Stat({
 }) {
   const toneClass =
     tone === "pos"
-      ? "text-emerald-400"
+      ? "text-profit"
       : tone === "neg"
-        ? "text-red-400"
+        ? "text-loss"
         : "text-zinc-100";
   return (
     <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-5">

@@ -87,9 +87,9 @@ function Metric({
 }) {
   const toneClass =
     tone === "pos"
-      ? "text-emerald-400"
+      ? "text-profit"
       : tone === "neg"
-        ? "text-red-400"
+        ? "text-loss"
         : "text-zinc-100";
   return (
     <div>

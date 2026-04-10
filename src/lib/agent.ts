@@ -10,6 +10,7 @@ import {
 import { snapshot as indicatorSnapshot } from "./indicators";
 import { db } from "./db";
 import { validateProposal } from "./guardrails";
+import { screenFinviz } from "./finviz";
 
 const client = new Anthropic();
 const MODEL = "claude-opus-4-6";
@@ -301,6 +302,38 @@ const TOOLS: Anthropic.Messages.ToolUnion[] = [
       required: ["source", "kind", "title", "body"],
     },
   },
+  {
+    name: "finviz_screen",
+    description:
+      "Run a Finviz screener via the direct CSV export endpoint (free, no auth). Returns a structured list of matching equities. Use Finviz filter syntax — filters are comma-separated, each one a code like 'cap_smallover', 'sh_avgvol_o500' (avg volume > 500K), 'ta_rsi_os30' (RSI < 30), 'ta_highlow52w_nh' (near 52-week high), 'geo_usa', 'sec_technology', 'fa_div_o1' (dividend > 1%). Leave filters empty to get the top unfiltered page. Prefer this over web_search for Finviz lookups — the data is structured and reliable.",
+    input_schema: {
+      type: "object",
+      properties: {
+        filters: {
+          type: "string",
+          description:
+            "Comma-separated Finviz filter codes, e.g. 'cap_smallover,sh_avgvol_o500,ta_rsi_os30'. Empty string for no filter.",
+        },
+        view: {
+          type: "integer",
+          description:
+            "Column set: 111 overview (default, recommended), 121 performance, 151 technical, 161 valuation, 171 financial",
+          enum: [111, 121, 151, 161, 171],
+        },
+        order: {
+          type: "string",
+          description:
+            "Optional column to sort by, e.g. 'change' asc, '-change' desc, '-volume' desc",
+        },
+        limit: {
+          type: "integer",
+          description: "Max rows to return (default 25, max 100)",
+          minimum: 1,
+          maximum: 100,
+        },
+      },
+    },
+  },
   { type: "web_search_20260209", name: "web_search" },
   { type: "web_fetch_20260209", name: "web_fetch" },
 ];
@@ -486,6 +519,26 @@ async function executeTool(
         created_at: rows[0].created_at,
         message:
           "Proposal created. User must approve or reject in the dashboard before it executes.",
+      });
+    }
+    case "finviz_screen": {
+      const p = input as {
+        filters?: string;
+        view?: number;
+        order?: string;
+        limit?: number;
+      };
+      const result = await screenFinviz({
+        filters: p.filters,
+        view: p.view,
+        order: p.order,
+        limit: Math.min(p.limit ?? 25, 100),
+      });
+      return JSON.stringify({
+        url: result.url,
+        total_matches: result.raw_length,
+        truncated: result.truncated,
+        rows: result.rows,
       });
     }
     case "save_insight": {

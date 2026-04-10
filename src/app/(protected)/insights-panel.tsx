@@ -27,7 +27,7 @@ const SOURCE_STYLES: Record<string, string> = {
   polymarket:
     "bg-purple-500/10 text-purple-300 border-purple-400/30",
   finviz: "bg-amber-500/10 text-amber-300 border-amber-400/30",
-  tradingview: "bg-cyan-500/10 text-cyan-300 border-cyan-400/30",
+  tradingview: "bg-accent/10 text-accent-light border-accent/30",
   chat: "bg-zinc-500/10 text-zinc-300 border-zinc-400/30",
 };
 
@@ -90,7 +90,7 @@ function InsightCard({ insight }: { insight: InsightRow }) {
           {hasMore && (
             <button
               onClick={() => setExpanded(!expanded)}
-              className="mt-2 text-[10px] font-mono uppercase tracking-wider text-cyan-400 hover:text-cyan-300"
+              className="mt-2 text-[10px] font-mono uppercase tracking-wider text-accent hover:text-accent-light"
             >
               {expanded ? "Collapse ▴" : "Read full ▾"}
             </button>

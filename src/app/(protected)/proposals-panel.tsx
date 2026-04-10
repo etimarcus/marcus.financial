@@ -47,7 +47,7 @@ function ProposalCard({ proposal }: { proposal: PendingProposal }) {
 
   const isBuy = proposal.side === "buy";
   const sideClasses = isBuy
-    ? "bg-emerald-500/10 text-emerald-300 border border-emerald-400/30"
+    ? "bg-profit/10 text-profit border border-profit/30"
     : "bg-red-500/10 text-red-300 border border-red-400/30";
 
   const confidencePct =
@@ -104,7 +104,7 @@ function ProposalCard({ proposal }: { proposal: PendingProposal }) {
                 ` @ $${Number(proposal.limit_price).toFixed(2)}`}
             </span>
             {confidencePct && (
-              <span className="ml-auto text-[10px] font-mono uppercase tracking-wider text-cyan-300">
+              <span className="ml-auto text-[10px] font-mono uppercase tracking-wider text-accent-light">
                 conf {confidencePct}
               </span>
             )}
@@ -138,7 +138,7 @@ function ProposalCard({ proposal }: { proposal: PendingProposal }) {
           <button
             onClick={handleApprove}
             disabled={isPending}
-            className="rounded-lg bg-emerald-500/90 hover:bg-emerald-400 text-black px-4 py-1.5 text-sm font-semibold disabled:opacity-50 shadow-[0_0_16px_rgba(52,211,153,0.2)] transition-all"
+            className="rounded-lg bg-accent hover:bg-accent-light text-black px-4 py-1.5 text-sm font-semibold disabled:opacity-50 shadow-[0_0_16px_rgba(86,118,220,0.35)] transition-all"
           >
             {isPending ? "…" : "Approve"}
           </button>
@@ -155,7 +155,7 @@ function ProposalCard({ proposal }: { proposal: PendingProposal }) {
       {feedback && (
         <div
           className={`mt-3 text-xs font-mono ${
-            feedback.ok ? "text-cyan-300" : "text-red-400"
+            feedback.ok ? "text-accent-light" : "text-red-400"
           }`}
         >
           {feedback.message}

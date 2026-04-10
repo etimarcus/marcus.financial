@@ -11,19 +11,19 @@ export default function LoginPage() {
 
   return (
     <main className="flex-1 flex items-center justify-center px-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="flex flex-col items-center gap-3">
-          <span className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-black font-bold text-xl shadow-[0_0_32px_rgba(34,211,238,0.4)]">
-            m
-          </span>
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">
-              marcus.financial
-            </h1>
-            <p className="text-xs text-zinc-500 mt-1 font-mono uppercase tracking-widest">
-              restricted access
-            </p>
-          </div>
+      <div className="w-full max-w-md space-y-8">
+        <div className="flex flex-col items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="marcus.financial"
+            width={417}
+            height={119}
+            className="max-w-full h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
+          />
+          <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-[0.2em]">
+            restricted access
+          </p>
         </div>
 
         <form
@@ -43,7 +43,7 @@ export default function LoginPage() {
               name="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2.5 text-zinc-100 font-mono focus:outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/30 transition-colors"
+              className="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2.5 text-zinc-100 font-mono focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-colors"
               placeholder="••••••••"
             />
           </div>
@@ -53,7 +53,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-lg bg-cyan-500 text-black py-2.5 font-semibold hover:bg-cyan-400 disabled:opacity-50 transition-colors shadow-[0_0_24px_rgba(34,211,238,0.3)]"
+            className="w-full rounded-lg bg-accent text-black py-2.5 font-semibold hover:bg-accent-light disabled:opacity-50 transition-colors shadow-[0_0_24px_rgba(86, 118, 220,0.3)]"
           >
             {pending ? "Authenticating…" : "Sign in"}
           </button>

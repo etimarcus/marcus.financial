@@ -150,7 +150,7 @@ export function ScannersPanel({ scanners, recentRuns }: ScannersPanelProps) {
               onChange={(e) => setResearchQuery(e.target.value)}
               placeholder="Query (optional) — e.g. small caps RSI < 30 unusual volume"
               disabled={isPending}
-              className="flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 disabled:opacity-50 transition-colors"
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleResearch();
               }}
@@ -158,7 +158,7 @@ export function ScannersPanel({ scanners, recentRuns }: ScannersPanelProps) {
             <button
               onClick={handleResearch}
               disabled={isPending}
-              className="rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/20 hover:border-cyan-400/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
             >
               {isPending ? "…" : "Run research"}
             </button>
@@ -168,7 +168,7 @@ export function ScannersPanel({ scanners, recentRuns }: ScannersPanelProps) {
         {feedback && (
           <div
             className={`text-xs font-mono ${
-              feedback.ok ? "text-cyan-300" : "text-red-400"
+              feedback.ok ? "text-accent-light" : "text-red-400"
             }`}
           >
             {feedback.message}
@@ -243,7 +243,7 @@ function ScannerRowView({
           disabled={disabled}
           className={`relative h-6 w-11 rounded-full border transition-all flex-shrink-0 ${
             scanner.enabled
-              ? "bg-cyan-500/90 border-cyan-400"
+              ? "bg-accent/90 border-accent"
               : "bg-zinc-800 border-white/10"
           } disabled:opacity-50`}
           aria-label={scanner.enabled ? "Disable" : "Enable"}
@@ -259,7 +259,7 @@ function ScannerRowView({
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 scanner.enabled
-                  ? "bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.6)]"
+                  ? "bg-accent shadow-[0_0_6px_rgba(86, 118, 220,0.6)]"
                   : "bg-zinc-600"
               }`}
             />
@@ -281,7 +281,7 @@ function ScannerRowView({
           value={scanner.intervalMinutes}
           onChange={(e) => onInterval(Number(e.target.value))}
           disabled={disabled || !scanner.enabled}
-          className="rounded-lg bg-zinc-900 border border-white/10 text-zinc-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-400/50 disabled:opacity-50"
+          className="rounded-lg bg-zinc-900 border border-white/10 text-zinc-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
         >
           {INTERVAL_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -292,7 +292,7 @@ function ScannerRowView({
         <button
           onClick={onRun}
           disabled={disabled}
-          className="rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/20 hover:border-cyan-400/50 px-3 py-1.5 text-xs font-medium disabled:opacity-50 transition-colors"
+          className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-xs font-medium disabled:opacity-50 transition-colors"
         >
           Run
         </button>

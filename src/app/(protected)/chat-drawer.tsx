@@ -18,7 +18,7 @@ export function ChatDrawer() {
     <>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400/50 px-3 py-1.5 text-xs font-medium transition-colors"
+        className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 text-accent-light hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-xs font-medium transition-colors"
         aria-label={open ? "Close chat" : "Open chat"}
       >
         <svg
@@ -38,7 +38,7 @@ export function ChatDrawer() {
       </button>
 
       <aside
-        className={`fixed right-0 top-0 z-40 h-screen w-full md:w-[440px] border-l border-white/[0.08] bg-[#07090d]/95 backdrop-blur-xl shadow-[0_0_60px_-15px_rgba(34,211,238,0.25)] transform transition-transform duration-300 ease-out ${
+        className={`fixed right-0 top-0 z-40 h-screen w-full md:w-[440px] border-l border-white/[0.08] bg-[#07090d]/95 backdrop-blur-xl shadow-[0_0_60px_-15px_rgba(86, 118, 220,0.25)] transform transition-transform duration-300 ease-out ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
         aria-hidden={!open}

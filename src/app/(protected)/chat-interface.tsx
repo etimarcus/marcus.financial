@@ -207,7 +207,7 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
       <div className="border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(86, 118, 220,0.8)]" />
             <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
               Analyst
             </h1>
@@ -252,7 +252,7 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
           {messages.length === 0 && (
             <div className="py-8">
               <div className="text-center mb-6">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-black font-bold mb-3 shadow-[0_0_24px_rgba(34,211,238,0.3)]">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-dark text-black font-bold mb-3 shadow-[0_0_24px_rgba(86, 118, 220,0.3)]">
                   m
                 </div>
                 <h2 className="text-base font-semibold text-zinc-100 mb-1">
@@ -267,7 +267,7 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
                   <button
                     key={s}
                     onClick={() => sendWith(s)}
-                    className="w-full text-left text-xs text-zinc-300 px-3 py-2.5 rounded-lg border border-white/[0.06] hover:border-cyan-400/30 hover:bg-cyan-500/[0.03] transition-colors"
+                    className="w-full text-left text-xs text-zinc-300 px-3 py-2.5 rounded-lg border border-white/[0.06] hover:border-accent/30 hover:bg-accent/[0.03] transition-colors"
                   >
                     {s}
                   </button>
@@ -282,7 +282,7 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
 
           {pending && messages[messages.length - 1]?.text === "" && (
             <div className="flex items-center gap-2 text-[11px] text-zinc-500 pl-10 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
               thinking…
             </div>
           )}
@@ -303,12 +303,12 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
             placeholder={pending ? "Waiting…" : "Ask the agent…"}
             disabled={pending}
             rows={2}
-            className="flex-1 resize-none rounded-lg border border-white/[0.08] bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-50 transition-colors"
+            className="flex-1 resize-none rounded-lg border border-white/[0.08] bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 disabled:opacity-50 transition-colors"
           />
           <button
             onClick={send}
             disabled={pending || !input.trim()}
-            className="rounded-lg bg-cyan-500 text-black px-3 py-2 text-sm font-semibold hover:bg-cyan-400 disabled:opacity-30 transition-colors"
+            className="rounded-lg bg-accent text-black px-3 py-2 text-sm font-semibold hover:bg-accent-light disabled:opacity-30 transition-colors"
           >
             Send
           </button>
@@ -324,7 +324,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[90%] rounded-xl rounded-tr-sm bg-cyan-500/10 border border-cyan-400/20 px-3 py-2">
+        <div className="max-w-[90%] rounded-xl rounded-tr-sm bg-accent/10 border border-accent/20 px-3 py-2">
           <div className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-100">
             {message.text}
           </div>
@@ -335,7 +335,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
   return (
     <div className="flex justify-start gap-2">
-      <div className="flex-shrink-0 h-7 w-7 rounded-md bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-black font-bold text-xs shadow-[0_0_12px_rgba(34,211,238,0.3)]">
+      <div className="flex-shrink-0 h-7 w-7 rounded-md bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center text-black font-bold text-xs shadow-[0_0_12px_rgba(86, 118, 220,0.3)]">
         m
       </div>
       <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
@@ -365,7 +365,7 @@ function ToolChip({ toolCall }: { toolCall: ToolCall }) {
     : "running";
   const dotColor = {
     running: "bg-amber-400 animate-pulse",
-    done: "bg-cyan-400",
+    done: "bg-accent",
     error: "bg-red-400",
   }[status];
 
@@ -376,7 +376,7 @@ function ToolChip({ toolCall }: { toolCall: ToolCall }) {
         className="flex items-center gap-1.5 w-full text-left px-2 py-1 hover:bg-white/[0.03] transition-colors"
       >
         <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
-        <span className="font-mono text-cyan-300">{toolCall.name}</span>
+        <span className="font-mono text-accent-light">{toolCall.name}</span>
         <span className="text-zinc-500 truncate flex-1 font-mono">
           {JSON.stringify(toolCall.input)}
         </span>

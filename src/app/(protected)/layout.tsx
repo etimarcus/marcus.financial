@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { logout } from "../login/actions";
 import { ChatDrawer } from "./chat-drawer";
 import { HeaderClock } from "./header-clock";
+import { BackgroundAmbience } from "./background-ambience";
 import { getAccount, getClock } from "@/lib/alpaca";
 
 export default async function ProtectedLayout({
@@ -34,7 +35,7 @@ export default async function ProtectedLayout({
               <span
                 className={`h-1.5 w-1.5 rounded-full ${
                   clock?.is_open
-                    ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"
+                    ? "bg-accent shadow-[0_0_8px_rgba(86, 118, 220,0.8)]"
                     : "bg-zinc-600"
                 }`}
               />
@@ -50,6 +51,7 @@ export default async function ProtectedLayout({
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <BackgroundAmbience />
             <ChatDrawer />
             <form action={logout}>
               <button
@@ -63,14 +65,14 @@ export default async function ProtectedLayout({
         </div>
       </header>
 
-      <div className="flex justify-center py-10">
-        <a href="/" aria-label="marcus.financial home">
+      <div className="px-6 py-8 max-w-6xl mx-auto w-full">
+        <a href="/" aria-label="marcus.financial home" className="inline-block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.png"
             alt="marcus.financial"
-            width={417}
-            height={119}
+            width={354}
+            height={101}
             className="max-w-full h-auto"
           />
         </a>

@@ -56,7 +56,7 @@ export function WatchlistPanel({
             value={symbol}
             onChange={(e) => setSymbol(e.target.value.toUpperCase())}
             placeholder="SYMBOL"
-            className="rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm font-mono w-28 text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 transition-colors"
+            className="rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm font-mono w-28 text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 transition-colors"
             maxLength={10}
             disabled={isPending}
           />
@@ -65,13 +65,13 @@ export function WatchlistPanel({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notes (optional)"
-            className="flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 transition-colors"
+            className="flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 transition-colors"
             disabled={isPending}
           />
           <button
             type="submit"
             disabled={isPending || !symbol.trim()}
-            className="rounded-lg bg-cyan-500/10 text-cyan-300 border border-cyan-400/30 hover:bg-cyan-500/20 hover:border-cyan-400/50 px-4 py-2 text-sm font-medium disabled:opacity-30 transition-colors"
+            className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-4 py-2 text-sm font-medium disabled:opacity-30 transition-colors"
           >
             Add
           </button>
