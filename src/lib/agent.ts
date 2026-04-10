@@ -305,7 +305,7 @@ const TOOLS: Anthropic.Messages.ToolUnion[] = [
   {
     name: "finviz_screen",
     description:
-      "Run a Finviz screener via the direct CSV export endpoint (free, no auth). Returns a structured list of matching equities. Use Finviz filter syntax — filters are comma-separated, each one a code like 'cap_smallover', 'sh_avgvol_o500' (avg volume > 500K), 'ta_rsi_os30' (RSI < 30), 'ta_highlow52w_nh' (near 52-week high), 'geo_usa', 'sec_technology', 'fa_div_o1' (dividend > 1%). Leave filters empty to get the top unfiltered page. Prefer this over web_search for Finviz lookups — the data is structured and reliable.",
+      "Run a Finviz screener by scraping the free public HTML page (no auth required). Always uses the Overview column set — returned fields: ticker, company, sector, industry, country, market_cap, pe, price, change, volume. Use Finviz filter syntax: comma-separated codes like 'cap_smallover' (market cap > $300M), 'sh_avgvol_o500' (avg volume > 500K), 'ta_rsi_os30' (RSI < 30), 'ta_highlow52w_nh' (near 52-week high), 'geo_usa', 'sec_technology', 'fa_div_o1' (dividend > 1%). Leave filters empty for the top unfiltered page. Prefer this over web_search for Finviz lookups — the data is structured.",
     input_schema: {
       type: "object",
       properties: {
@@ -314,22 +314,16 @@ const TOOLS: Anthropic.Messages.ToolUnion[] = [
           description:
             "Comma-separated Finviz filter codes, e.g. 'cap_smallover,sh_avgvol_o500,ta_rsi_os30'. Empty string for no filter.",
         },
-        view: {
-          type: "integer",
-          description:
-            "Column set: 111 overview (default, recommended), 121 performance, 151 technical, 161 valuation, 171 financial",
-          enum: [111, 121, 151, 161, 171],
-        },
         order: {
           type: "string",
           description:
-            "Optional column to sort by, e.g. 'change' asc, '-change' desc, '-volume' desc",
+            "Optional column to sort by: 'change' asc, '-change' desc, '-volume' desc, '-marketcap' desc, etc.",
         },
         limit: {
           type: "integer",
-          description: "Max rows to return (default 25, max 100)",
+          description: "Max rows to return (default 20, max 40)",
           minimum: 1,
-          maximum: 100,
+          maximum: 40,
         },
       },
     },
@@ -524,15 +518,13 @@ async function executeTool(
     case "finviz_screen": {
       const p = input as {
         filters?: string;
-        view?: number;
         order?: string;
         limit?: number;
       };
       const result = await screenFinviz({
         filters: p.filters,
-        view: p.view,
         order: p.order,
-        limit: Math.min(p.limit ?? 25, 100),
+        limit: Math.min(p.limit ?? 20, 40),
       });
       return JSON.stringify({
         url: result.url,

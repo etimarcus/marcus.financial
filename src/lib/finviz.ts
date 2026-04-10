@@ -1,9 +1,13 @@
 import "server-only";
 
-const BASE = "https://finviz.com/export.ashx";
+// Finviz disabled the free CSV export endpoint (now redirects to /elite).
+// The public HTML screener page is still free, so we scrape it. The markup is
+// regular enough that a small regex pass is sufficient; no HTML parser lib.
+const BASE = "https://finviz.com/screener.ashx";
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36";
 
 export type FinvizRow = {
-  no: number;
   ticker: string;
   company: string;
   sector: string;
@@ -14,71 +18,60 @@ export type FinvizRow = {
   price: string;
   change: string;
   volume: string;
-  [extra: string]: string | number;
 };
-
-// Parse a single CSV line, respecting quoted fields that may contain commas.
-function parseCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') {
-          cur += '"';
-          i++;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        cur += ch;
-      }
-    } else {
-      if (ch === ",") {
-        out.push(cur);
-        cur = "";
-      } else if (ch === '"') {
-        inQuotes = true;
-      } else {
-        cur += ch;
-      }
-    }
-  }
-  out.push(cur);
-  return out;
-}
-
-function parseCsv(text: string): FinvizRow[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
-  if (lines.length === 0) return [];
-  const headers = parseCsvLine(lines[0]).map((h) =>
-    h
-      .toLowerCase()
-      .replace(/\./g, "")
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_|_$/g, "")
-  );
-  const rows: FinvizRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCsvLine(lines[i]);
-    if (values.length === 0 || values[0] === "") continue;
-    const row: Record<string, string | number> = {};
-    for (let j = 0; j < headers.length; j++) {
-      row[headers[j]] = values[j] ?? "";
-    }
-    rows.push(row as unknown as FinvizRow);
-  }
-  return rows;
-}
 
 export type FinvizScreenOptions = {
-  filters?: string; // Finviz filter string, e.g. "cap_smallover,sh_avgvol_o500,ta_rsi_os30"
-  view?: number; // Column set: 111 overview, 121 performance, 151 technical, etc.
-  order?: string; // Column to order by, e.g. "-change" for desc by change
-  limit?: number; // Max rows to return after parsing
+  filters?: string; // Comma-separated Finviz filter codes, e.g. "cap_smallover,ta_rsi_os30"
+  order?: string; // Column to sort by, e.g. "-change" desc
+  limit?: number; // Max rows to return (cap 40)
 };
+
+const ROW_REGEX = /<tr class="styled-row[^>]*>([\s\S]*?)<\/tr>/g;
+const ANCHOR_REGEX = /<a [^>]*>([\s\S]*?)<\/a>/g;
+const TAG_REGEX = /<[^>]*>/g;
+const TICKER_ATTR = /data-boxover-ticker="([^"]+)"/;
+const COMPANY_ATTR = /data-boxover-company="([^"]+)"/;
+
+function decodeEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
+}
+
+function parseRow(rowHtml: string): FinvizRow | null {
+  const tickerMatch = rowHtml.match(TICKER_ATTR);
+  const companyMatch = rowHtml.match(COMPANY_ATTR);
+
+  // Collect the visible text of each <a> cell in order. The overview view
+  // (v=111) yields: [#, ticker, company, sector, industry, country, mkt cap,
+  // P/E, price, change, volume].
+  const cells: string[] = [];
+  let m: RegExpExecArray | null;
+  ANCHOR_REGEX.lastIndex = 0;
+  while ((m = ANCHOR_REGEX.exec(rowHtml)) !== null) {
+    const text = decodeEntities(m[1].replace(TAG_REGEX, "")).trim();
+    if (text.length > 0) cells.push(text);
+  }
+
+  if (cells.length < 3) return null;
+
+  return {
+    ticker: tickerMatch?.[1] ?? cells[1] ?? "",
+    company: decodeEntities(companyMatch?.[1] ?? cells[2] ?? ""),
+    sector: cells[3] ?? "",
+    industry: cells[4] ?? "",
+    country: cells[5] ?? "",
+    market_cap: cells[6] ?? "",
+    pe: cells[7] ?? "",
+    price: cells[8] ?? "",
+    change: cells[9] ?? "",
+    volume: cells[10] ?? "",
+  };
+}
 
 export async function screenFinviz(
   opts: FinvizScreenOptions = {}
@@ -88,12 +81,7 @@ export async function screenFinviz(
   truncated: boolean;
   raw_length: number;
 }> {
-  const view = opts.view ?? 111;
-  const params = new URLSearchParams({
-    v: String(view),
-    ft: "4",
-    auth: "",
-  });
+  const params = new URLSearchParams({ v: "111", ft: "4" });
   if (opts.filters) params.set("f", opts.filters);
   if (opts.order) params.set("o", opts.order);
 
@@ -101,29 +89,45 @@ export async function screenFinviz(
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-      Accept: "text/csv,application/csv;q=0.9,*/*;q=0.1",
+      "User-Agent": UA,
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
     },
+    redirect: "manual",
     cache: "no-store",
   });
+
+  if (res.status >= 300 && res.status < 400) {
+    const loc = res.headers.get("location");
+    throw new Error(
+      `Finviz redirected (${res.status} → ${loc ?? "?"}). The free screener is still expected at finviz.com/screener.ashx; if this persists, Finviz may have paywalled it.`
+    );
+  }
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(
-      `Finviz export failed: ${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 200)}` : ""}`
+      `Finviz screener failed: ${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 200)}` : ""}`
     );
   }
 
-  const text = await res.text();
-  const allRows = parseCsv(text);
-  const limit = opts.limit ?? 50;
-  const rows = allRows.slice(0, limit);
+  const html = await res.text();
+  const rows: FinvizRow[] = [];
+  let match: RegExpExecArray | null;
+  ROW_REGEX.lastIndex = 0;
+  while ((match = ROW_REGEX.exec(html)) !== null) {
+    const row = parseRow(match[1]);
+    if (row && row.ticker) rows.push(row);
+  }
+
+  const limit = Math.min(Math.max(opts.limit ?? 20, 1), 40);
+  const sliced = rows.slice(0, limit);
 
   return {
     url,
-    rows,
-    truncated: allRows.length > rows.length,
-    raw_length: allRows.length,
+    rows: sliced,
+    truncated: rows.length > sliced.length,
+    raw_length: rows.length,
   };
 }
