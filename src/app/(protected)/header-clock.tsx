@@ -13,7 +13,7 @@ export function HeaderClock() {
 
   if (!now) {
     return (
-      <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-500 tabular-nums">
+      <span className="font-mono text-sm font-semibold uppercase tracking-wider text-zinc-400 tabular-nums">
         ────-──-── ──:──:── et
       </span>
     );
@@ -36,7 +36,7 @@ export function HeaderClock() {
   const time = `${get("hour")}:${get("minute")}:${get("second")}`;
 
   return (
-    <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400 tabular-nums">
+    <span className="font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200 tabular-nums">
       {date} {time} ET
     </span>
   );

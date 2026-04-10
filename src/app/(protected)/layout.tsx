@@ -30,27 +30,50 @@ export default async function ProtectedLayout({
           <div className="flex items-center gap-3 flex-wrap">
             <HeaderClock />
             <span className="text-zinc-700">·</span>
-            <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-zinc-400">
+            <span className="flex items-center gap-1.5 font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200">
               <span
-                className={`h-1.5 w-1.5 rounded-full ${
+                className={`h-2 w-2 rounded-full ${
                   clock?.is_open
-                    ? "bg-accent shadow-[0_0_8px_rgba(86, 118, 220,0.8)]"
+                    ? "bg-accent shadow-[0_0_10px_rgba(86,118,220,0.9)]"
                     : "bg-zinc-600"
                 }`}
               />
               {clock ? (clock.is_open ? "market open" : "market closed") : "—"}
             </span>
             <span className="text-zinc-700">·</span>
-            <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">
+            <span className="font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200">
               {account?.status?.toLowerCase() ?? "—"}
             </span>
             <span className="text-zinc-700">·</span>
-            <span className="font-mono text-[11px] uppercase tracking-wider text-zinc-400">
+            <span className="font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200">
               paper
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <ChatDrawer />
+            <form action={logout}>
+              <button
+                type="submit"
+                className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 text-accent-light hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-xs font-medium transition-colors"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                <span>Sign out</span>
+              </button>
+            </form>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/icon.png"
@@ -59,14 +82,6 @@ export default async function ProtectedLayout({
               height={48}
               className="h-12 w-12 drop-shadow-[0_0_12px_rgba(242,214,106,0.25)]"
             />
-            <form action={logout}>
-              <button
-                type="submit"
-                className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors"
-              >
-                Sign out
-              </button>
-            </form>
           </div>
         </div>
       </header>
