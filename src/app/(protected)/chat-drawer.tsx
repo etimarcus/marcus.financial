@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChatInterface } from "./chat-interface";
 
 export function ChatDrawer() {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -13,6 +19,17 @@ export function ChatDrawer() {
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, []);
+
+  const drawer = (
+    <aside
+      className={`fixed right-0 top-0 z-[100] h-screen w-full md:w-[440px] border-l border-white/[0.08] bg-[#07090d]/95 backdrop-blur-xl shadow-[0_0_60px_-15px_rgba(86,118,220,0.25)] transform transition-transform duration-300 ease-out ${
+        open ? "translate-x-0" : "translate-x-full"
+      }`}
+      aria-hidden={!open}
+    >
+      <ChatInterface onClose={() => setOpen(false)} />
+    </aside>
+  );
 
   return (
     <>
@@ -37,14 +54,7 @@ export function ChatDrawer() {
         <span>Chat</span>
       </button>
 
-      <aside
-        className={`fixed right-0 top-0 z-40 h-screen w-full md:w-[440px] border-l border-white/[0.08] bg-[#07090d]/95 backdrop-blur-xl shadow-[0_0_60px_-15px_rgba(86, 118, 220,0.25)] transform transition-transform duration-300 ease-out ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-        aria-hidden={!open}
-      >
-        <ChatInterface onClose={() => setOpen(false)} />
-      </aside>
+      {mounted && createPortal(drawer, document.body)}
     </>
   );
 }
