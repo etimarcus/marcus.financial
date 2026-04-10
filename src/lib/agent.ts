@@ -631,7 +631,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
   try {
     for (let iteration = 0; iteration < MAX_ITERATIONS; iteration++) {
       const today = new Date().toISOString().slice(0, 10);
-      const streamParams: Anthropic.Messages.MessageCreateParamsStreaming = {
+      const streamParams: Anthropic.Messages.MessageStreamParams = {
         model: MODEL,
         max_tokens: MAX_TOKENS,
         thinking: { type: "adaptive" },
@@ -648,13 +648,25 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
         ],
         tools: TOOLS,
         messages,
-        stream: true,
       };
-      if (containerId) streamParams.container = containerId;
+      if (containerId) {
+        streamParams.container = containerId;
+      }
+      console.log(
+        `[agent:${trigger}] iter=${iteration} container=${containerId ?? "none"} messages=${messages.length}`
+      );
       const stream = client.messages.stream(streamParams);
 
       for await (const event of stream) {
-        if (event.type === "content_block_delta") {
+        if (event.type === "message_start") {
+          // Capture container id from the raw stream event. The SDK's
+          // stream.finalMessage() does not reliably populate this field on
+          // the resulting snapshot, so we grab it directly off the wire.
+          const incoming = event.message.container;
+          if (incoming && incoming.id) {
+            containerId = incoming.id;
+          }
+        } else if (event.type === "content_block_delta") {
           if (event.delta.type === "text_delta") {
             await onEvent({ type: "text", value: event.delta.text });
           } else if (event.delta.type === "thinking_delta") {
@@ -665,6 +677,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
 
       const message = await stream.finalMessage();
 
+      // Fallback: if finalMessage did happen to populate container, prefer
+      // the newer value (the API can return a different id on a new turn).
       if (message.container?.id) {
         containerId = message.container.id;
       }
