@@ -11,24 +11,19 @@ export default function LoginPage() {
 
   return (
     <main className="flex-1 flex items-center justify-center px-6">
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex flex-col items-center gap-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="marcus.financial"
-            width={417}
-            height={119}
-            className="max-w-full h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
-          />
-          <p className="text-[10px] text-zinc-500 font-mono uppercase tracking-[0.2em]">
-            restricted access
-          </p>
-        </div>
+      <div className="w-full max-w-md flex flex-col items-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/logo.png"
+          alt="marcus.financial"
+          width={417}
+          height={119}
+          className="max-w-full h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
+        />
 
         <form
           action={formAction}
-          className="space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
+          className="w-full -mt-2 space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
         >
           <div>
             <label
@@ -59,7 +54,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-[10px] text-zinc-600 font-mono uppercase tracking-widest">
+        <p className="mt-6 text-center text-[10px] text-zinc-600 font-mono uppercase tracking-widest">
           Paper trading · Alpaca · Opus 4.6
         </p>
       </div>
