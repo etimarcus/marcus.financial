@@ -4,6 +4,11 @@ import {
   getPositions,
   type AlpacaPosition,
 } from "@/lib/alpaca";
+import { db } from "@/lib/db";
+import {
+  ProposalsPanel,
+  type PendingProposal,
+} from "./proposals-panel";
 
 function fmtUsd(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -20,17 +25,30 @@ function fmtPct(value: string | number) {
   return `${(n * 100).toFixed(2)}%`;
 }
 
+async function getPendingProposals(): Promise<PendingProposal[]> {
+  const { rows } = await db.query(
+    `SELECT id, symbol, side, qty, order_type, limit_price, stop_loss,
+            take_profit, reasoning, confidence, created_at
+       FROM proposals
+      WHERE status = 'pending'
+      ORDER BY created_at DESC`
+  );
+  return rows as PendingProposal[];
+}
+
 export default async function Dashboard() {
   let account;
   let positions: AlpacaPosition[] = [];
   let clock;
+  let proposals: PendingProposal[] = [];
   let error: string | null = null;
 
   try {
-    [account, positions, clock] = await Promise.all([
+    [account, positions, clock, proposals] = await Promise.all([
       getAccount(),
       getPositions(),
       getClock(),
+      getPendingProposals(),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -82,6 +100,8 @@ export default async function Dashboard() {
         <Stat label="Cash" value={fmtUsd(account.cash)} />
         <Stat label="Buying power" value={fmtUsd(account.buying_power)} />
       </section>
+
+      <ProposalsPanel proposals={proposals} />
 
       <section>
         <h2 className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 mb-2">

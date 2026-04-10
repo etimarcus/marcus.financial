@@ -62,6 +62,20 @@ async function tradingGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function tradingPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${TRADING_BASE}${path}`, {
+    method: "POST",
+    headers: { ...headers(), "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`Alpaca POST ${path} failed: ${res.status} ${errBody}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 async function dataGet<T>(path: string): Promise<T> {
   const res = await fetch(`${DATA_BASE}${path}`, {
     headers: headers(),
@@ -129,4 +143,60 @@ export function getNews(
     sort: "desc",
   });
   return dataGet(`/v1beta1/news?${params}`);
+}
+
+export type AlpacaOrder = {
+  id: string;
+  client_order_id: string;
+  symbol: string;
+  side: "buy" | "sell";
+  qty: string;
+  filled_qty: string;
+  type: string;
+  time_in_force: string;
+  limit_price: string | null;
+  status: string;
+  submitted_at: string;
+  filled_at: string | null;
+  filled_avg_price: string | null;
+};
+
+export type CreateOrderParams = {
+  symbol: string;
+  qty: number;
+  side: "buy" | "sell";
+  type: "market" | "limit";
+  limit_price?: number;
+  stop_loss?: number;
+  take_profit?: number;
+  time_in_force?: "day" | "gtc";
+};
+
+export function createOrder(params: CreateOrderParams): Promise<AlpacaOrder> {
+  const body: Record<string, unknown> = {
+    symbol: params.symbol.toUpperCase(),
+    qty: String(params.qty),
+    side: params.side,
+    type: params.type,
+    time_in_force: params.time_in_force ?? "day",
+  };
+  if (params.type === "limit") {
+    if (params.limit_price === undefined) {
+      throw new Error("limit_price is required for limit orders");
+    }
+    body.limit_price = String(params.limit_price);
+  }
+  const hasStop = params.stop_loss !== undefined;
+  const hasTake = params.take_profit !== undefined;
+  if (hasStop || hasTake) {
+    if (params.type !== "limit") {
+      throw new Error(
+        "Alpaca bracket orders require a limit parent order. Use type=limit with limit_price when attaching stop_loss or take_profit."
+      );
+    }
+    body.order_class = "bracket";
+    if (hasStop) body.stop_loss = { stop_price: String(params.stop_loss) };
+    if (hasTake) body.take_profit = { limit_price: String(params.take_profit) };
+  }
+  return tradingPost<AlpacaOrder>("/v2/orders", body);
 }

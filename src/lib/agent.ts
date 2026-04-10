@@ -15,23 +15,31 @@ const MODEL = "claude-opus-4-6";
 const MAX_TOKENS = 32000;
 const MAX_ITERATIONS = 20;
 
-const SYSTEM_PROMPT = `You are the market analyst for marcus.financial, a personal trading workstation for its single owner, Etienne Marcus.
+const SYSTEM_PROMPT = `You are the co-pilot for marcus.financial, a personal trading workstation for its single owner, Etienne Marcus.
 
-Your mission is to analyze US equity markets and help Etienne form trading decisions. You are currently operating in ANALYST MODE — you have read-only tools: account data, positions, price history, news, technical indicators, and the watchlist. You cannot place trades, modify positions, or change any state.
+You operate in CO-PILOT MODE. You can analyze US equity markets AND propose trades. You CANNOT execute trades directly — every trade must be approved by the user in the dashboard before anything hits the broker. Your job is to (a) analyze, and (b) propose trades via the propose_trade tool. The user is the circuit breaker.
 
 Operating context:
-- The broker is Alpaca, running on paper trading (simulated money, $100k default).
-- US equity markets. Prices and news come from Alpaca's data API.
+- Broker: Alpaca, running on paper trading ($100k simulated). Nothing is real money yet.
+- US equity markets only. Prices and news come from Alpaca's data API.
 - When the user asks about "the market" without specifying, default to SPY as the broad benchmark.
+
+Hard rules for proposing trades:
+1. NEVER propose a trade without first analyzing the setup with tools. At minimum: get the current price (get_bars or calculate_indicators) and check positions (get_positions). For conviction trades, also pull news.
+2. Before proposing, call get_proposals to see what's already pending. Do not duplicate an existing pending proposal for the same symbol + side.
+3. Every proposal MUST include: symbol, side (buy/sell), quantity, order type (market or limit), and a reasoning string explaining the thesis in 2-4 sentences. The reasoning must cite the specific data points (price, RSI, headline, etc.) that justify the trade.
+4. Whenever risk can be bounded, use a limit order with both stop_loss and take_profit — Alpaca treats this as a bracket. If you use stops, you MUST pass type=limit and a limit_price; market orders cannot attach stops in Alpaca.
+5. confidence is a number 0-1 reflecting your honest conviction. Use it. A 0.5 means "slight edge"; 0.9 means "very strong setup". Overconfident proposals are worse than no proposal.
+6. Do not propose more than 3 trades in a single turn unless the user explicitly asked for a portfolio rebalance.
+7. If the user says "buy X" / "sell Y" directly, still call propose_trade — don't try to bypass the approval step by pretending the user already approved. The dashboard is the approval surface, not the chat.
 
 How to work:
 - Always ground claims in tool output. Never guess a price, a headline, or an indicator value.
-- Prefer specificity: use tickers, numbers, dates. Quantify whenever possible.
+- Prefer specificity: tickers, numbers, dates, citation of source. Quantify everything.
 - When you run indicators, state the timeframe and lookback you used.
-- If the user asks a vague question, ask ONE clarifying question before calling tools — don't burn tokens on a blind exploration.
 - Write in the same language the user writes in (Spanish or English). Match their tone.
 - Be concise. Tables and bullet lists for structured data. No filler prose.
-- You are NOT a licensed financial advisor. If the user asks whether to buy/sell something, analyze the setup and state the case on both sides; make the recommendation explicit but remind them the decision is theirs.
+- You are NOT a licensed financial advisor. Analyze both sides before recommending.
 - If a tool call fails, report the error verbatim and propose a workaround. Do not invent data.
 
 Tools you have:
@@ -39,7 +47,9 @@ Tools you have:
 - get_bars(symbol, timeframe, limit) — historical OHLCV bars. Timeframes: 1Min, 5Min, 15Min, 1Hour, 1Day.
 - get_news(symbols, limit) — recent headlines from Alpaca's news feed.
 - calculate_indicators(symbol, timeframe, lookback) — SMA/EMA/RSI/MACD snapshot from the last N bars.
-- get_watchlist — the user's tracked symbols stored in Postgres.
+- get_watchlist — user's tracked symbols stored in Postgres.
+- get_proposals — current pending trade proposals awaiting approval.
+- propose_trade — create a new pending proposal. Does NOT execute. The user approves in the dashboard.
 
 Think before you act. Plan tool calls in parallel when they are independent. Don't chain unnecessary calls.`;
 
@@ -157,11 +167,97 @@ const TOOLS: Anthropic.Tool[] = [
       properties: {},
     },
   },
+  {
+    name: "get_proposals",
+    description:
+      "Get currently pending trade proposals awaiting user approval. Call this before proposing a new trade to avoid duplicating an open proposal on the same symbol + side.",
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "propose_trade",
+    description:
+      "Create a new pending trade proposal. This does NOT execute the trade — it writes a row to the proposals table and the user approves or rejects it in the dashboard. Only propose trades you have analyzed with tools. Reasoning must cite specific data points.",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: {
+          type: "string",
+          description: "Stock ticker, uppercase",
+        },
+        side: {
+          type: "string",
+          enum: ["buy", "sell"],
+          description: "buy to open a long, sell to close or short",
+        },
+        qty: {
+          type: "number",
+          description: "Number of shares (can be fractional)",
+          exclusiveMinimum: 0,
+        },
+        order_type: {
+          type: "string",
+          enum: ["market", "limit"],
+          description:
+            "Use limit when you want price protection or when attaching stop_loss/take_profit (required for brackets).",
+        },
+        limit_price: {
+          type: "number",
+          description:
+            "Required when order_type=limit. The price at which the order triggers.",
+          exclusiveMinimum: 0,
+        },
+        stop_loss: {
+          type: "number",
+          description:
+            "Optional. Price at which to exit if the trade goes against you. Requires order_type=limit.",
+          exclusiveMinimum: 0,
+        },
+        take_profit: {
+          type: "number",
+          description:
+            "Optional. Price at which to close the trade at a gain. Requires order_type=limit.",
+          exclusiveMinimum: 0,
+        },
+        reasoning: {
+          type: "string",
+          description:
+            "2-4 sentence thesis citing the specific tool output that justifies this trade.",
+          minLength: 40,
+        },
+        confidence: {
+          type: "number",
+          description:
+            "Your honest conviction 0-1. 0.5 = slight edge, 0.9 = very strong setup.",
+          minimum: 0,
+          maximum: 1,
+        },
+      },
+      required: [
+        "symbol",
+        "side",
+        "qty",
+        "order_type",
+        "reasoning",
+        "confidence",
+      ],
+    },
+  },
 ];
 
 type ToolInput = Record<string, unknown>;
 
-async function executeTool(name: string, input: ToolInput): Promise<string> {
+type ExecContext = {
+  runId: number;
+};
+
+async function executeTool(
+  name: string,
+  input: ToolInput,
+  ctx: ExecContext
+): Promise<string> {
   switch (name) {
     case "get_account": {
       const a = await getAccount();
@@ -248,6 +344,66 @@ async function executeTool(name: string, input: ToolInput): Promise<string> {
         "SELECT symbol, notes, created_at FROM watchlist ORDER BY symbol"
       );
       return JSON.stringify(rows);
+    }
+    case "get_proposals": {
+      const { rows } = await db.query(
+        `SELECT id, symbol, side, qty, order_type, limit_price, stop_loss,
+                take_profit, reasoning, confidence, status, created_at
+           FROM proposals
+          WHERE status = 'pending'
+          ORDER BY created_at DESC`
+      );
+      return JSON.stringify(rows);
+    }
+    case "propose_trade": {
+      const p = input as {
+        symbol: string;
+        side: "buy" | "sell";
+        qty: number;
+        order_type: "market" | "limit";
+        limit_price?: number;
+        stop_loss?: number;
+        take_profit?: number;
+        reasoning: string;
+        confidence: number;
+      };
+      if (p.order_type === "limit" && p.limit_price === undefined) {
+        throw new Error("limit_price is required when order_type is 'limit'");
+      }
+      if (
+        (p.stop_loss !== undefined || p.take_profit !== undefined) &&
+        p.order_type !== "limit"
+      ) {
+        throw new Error(
+          "stop_loss and take_profit require order_type='limit' (Alpaca bracket orders need a limit parent)"
+        );
+      }
+      const { rows } = await db.query(
+        `INSERT INTO proposals
+           (agent_run_id, symbol, side, qty, order_type, limit_price,
+            stop_loss, take_profit, reasoning, confidence, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+         RETURNING id, created_at`,
+        [
+          ctx.runId,
+          p.symbol.toUpperCase(),
+          p.side,
+          p.qty,
+          p.order_type,
+          p.limit_price ?? null,
+          p.stop_loss ?? null,
+          p.take_profit ?? null,
+          p.reasoning,
+          p.confidence,
+        ]
+      );
+      return JSON.stringify({
+        created: true,
+        proposal_id: rows[0].id,
+        created_at: rows[0].created_at,
+        message:
+          "Proposal created. User must approve or reject in the dashboard before it executes.",
+      });
     }
     default:
       throw new Error(`Unknown tool: ${name}`);
@@ -368,7 +524,8 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
         try {
           const result = await executeTool(
             tool.name,
-            tool.input as ToolInput
+            tool.input as ToolInput,
+            { runId }
           );
           toolResults.push({
             type: "tool_result",
