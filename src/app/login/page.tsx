@@ -23,7 +23,7 @@ export default function LoginPage() {
 
         <form
           action={formAction}
-          className="w-full -mt-2 space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
+          className="w-full mt-3 space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
         >
           <div>
             <label
