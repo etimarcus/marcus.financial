@@ -139,31 +139,7 @@ export default async function Dashboard() {
   const dayPnlPct = lastEquity > 0 ? dayPnl / lastEquity : 0;
 
   return (
-    <main className="p-6 max-w-6xl mx-auto space-y-8">
-      <section className="flex items-end justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
-            Dashboard
-          </h1>
-          <div className="flex items-center gap-3 mt-1 text-xs font-mono uppercase tracking-wider text-zinc-500">
-            <span className="flex items-center gap-1.5">
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  clock.is_open
-                    ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"
-                    : "bg-zinc-600"
-                }`}
-              />
-              {clock.is_open ? "market open" : "market closed"}
-            </span>
-            <span className="text-zinc-700">·</span>
-            <span>{account.status.toLowerCase()}</span>
-            <span className="text-zinc-700">·</span>
-            <span>paper</span>
-          </div>
-        </div>
-      </section>
-
+    <main className="px-6 pb-10 max-w-6xl mx-auto space-y-8">
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Equity" value={fmtUsd(account.equity)} big />
         <Stat
