@@ -1,5 +1,6 @@
 import {
   getAccount,
+  getAsset,
   getClock,
   getNews,
   getPositions,
@@ -52,13 +53,34 @@ async function getPendingProposals(): Promise<PendingProposal[]> {
   return rows as PendingProposal[];
 }
 
+async function backfillWatchlistNames(entries: WatchlistEntry[]): Promise<void> {
+  const missing = entries.filter((e) => !e.name);
+  if (missing.length === 0) return;
+  await Promise.all(
+    missing.map(async (e) => {
+      try {
+        const asset = await getAsset(e.symbol);
+        if (asset.name) {
+          e.name = asset.name;
+          await db.query(
+            "UPDATE watchlist SET name = $1 WHERE id = $2 AND name IS NULL",
+            [asset.name, e.id]
+          );
+        }
+      } catch {
+        // Symbol not recognized — leave name null.
+      }
+    })
+  );
+}
+
 async function getWatchlistWithMarketData(): Promise<{
   entries: WatchlistEntry[];
   snapshots: Record<string, AlpacaSnapshot>;
   newsBySymbol: Record<string, AlpacaNewsArticle[]>;
 }> {
   const { rows } = await db.query(
-    "SELECT id, symbol, notes, created_at FROM watchlist ORDER BY symbol"
+    "SELECT id, symbol, name, notes, created_at FROM watchlist ORDER BY symbol"
   );
   const entries = rows as WatchlistEntry[];
   if (entries.length === 0) {
@@ -68,6 +90,7 @@ async function getWatchlistWithMarketData(): Promise<{
   const [snapshotsResult, newsResult] = await Promise.allSettled([
     getSnapshots(symbols),
     getNews(symbols, Math.min(50, symbols.length * 5)),
+    backfillWatchlistNames(entries),
   ]);
   const snapshots =
     snapshotsResult.status === "fulfilled" ? snapshotsResult.value : {};

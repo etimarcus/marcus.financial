@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import { createOrder } from "@/lib/alpaca";
+import { createOrder, getAsset } from "@/lib/alpaca";
 import { validateProposal } from "@/lib/guardrails";
 import {
   runScan,
@@ -142,11 +142,22 @@ export async function addToWatchlist(
     return { ok: false, error: "Invalid symbol format" };
   }
 
+  let companyName: string | null = null;
+  try {
+    const asset = await getAsset(normalized);
+    companyName = asset.name || null;
+  } catch {
+    // Alpaca doesn't recognize the symbol — still let the user add it;
+    // it just won't have a company name. Could also bail here.
+  }
+
   try {
     await db.query(
-      `INSERT INTO watchlist (symbol, notes) VALUES ($1, $2)
-       ON CONFLICT (symbol) DO UPDATE SET notes = EXCLUDED.notes`,
-      [normalized, notes ?? null]
+      `INSERT INTO watchlist (symbol, notes, name) VALUES ($1, $2, $3)
+       ON CONFLICT (symbol) DO UPDATE
+         SET notes = EXCLUDED.notes,
+             name = COALESCE(EXCLUDED.name, watchlist.name)`,
+      [normalized, notes ?? null, companyName]
     );
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

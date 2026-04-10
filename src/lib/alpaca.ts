@@ -92,6 +92,22 @@ export function getAccount() {
   return tradingGet<AlpacaAccount>("/v2/account");
 }
 
+export type AlpacaAsset = {
+  id: string;
+  class: string;
+  exchange: string;
+  symbol: string;
+  name: string;
+  status: string;
+  tradable: boolean;
+};
+
+export function getAsset(symbol: string): Promise<AlpacaAsset> {
+  return tradingGet<AlpacaAsset>(
+    `/v2/assets/${encodeURIComponent(symbol.toUpperCase())}`
+  );
+}
+
 export function getPositions() {
   return tradingGet<AlpacaPosition[]>("/v2/positions");
 }

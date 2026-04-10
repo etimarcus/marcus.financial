@@ -7,6 +7,7 @@ import type { AlpacaSnapshot, AlpacaNewsArticle } from "@/lib/alpaca";
 export type WatchlistEntry = {
   id: number;
   symbol: string;
+  name: string | null;
   notes: string | null;
   created_at: string;
 };
@@ -228,6 +229,9 @@ function WatchlistRow({
         </span>
         <span className="font-mono font-semibold text-zinc-100 w-16 tabular-nums">
           {entry.symbol}
+        </span>
+        <span className="text-xs text-zinc-400 truncate w-40 md:w-56">
+          {entry.name ?? ""}
         </span>
         <span
           className={`font-mono tabular-nums text-sm w-24 ${
