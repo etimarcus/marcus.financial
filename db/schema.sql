@@ -60,6 +60,37 @@ INSERT INTO cron_config (id, enabled, interval_minutes)
 VALUES (1, TRUE, 15)
 ON CONFLICT (id) DO NOTHING;
 
+CREATE TABLE IF NOT EXISTS scanner_config (
+  scanner_key TEXT PRIMARY KEY,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  interval_minutes INTEGER NOT NULL DEFAULT 15 CHECK (interval_minutes >= 5),
+  last_run_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO scanner_config (scanner_key, enabled, interval_minutes)
+VALUES
+  ('alpaca', TRUE, 15),
+  ('tradingview', TRUE, 30),
+  ('polymarket', FALSE, 60)
+ON CONFLICT (scanner_key) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS insights (
+  id SERIAL PRIMARY KEY,
+  source TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  agent_run_id INTEGER REFERENCES agent_runs(id),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  symbols TEXT[],
+  metadata JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  read_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_insights_created_at ON insights(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_insights_source ON insights(source);
+
 CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
 CREATE INDEX IF NOT EXISTS idx_proposals_created_at ON proposals(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);

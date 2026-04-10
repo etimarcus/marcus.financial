@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runScheduledScan } from "@/lib/scheduled-scan";
+import { runAllScheduledScanners } from "@/lib/scheduled-scan";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const result = await runScheduledScan({ force: false });
-  const status = result.ok ? 200 : 500;
-  return NextResponse.json(result, { status });
+  const results = await runAllScheduledScanners();
+  const anyFailure = results.some((r) => !r.ok);
+  return NextResponse.json(
+    { ok: !anyFailure, results },
+    { status: anyFailure ? 500 : 200 }
+  );
 }

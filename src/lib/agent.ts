@@ -57,10 +57,20 @@ Tools you have:
 - get_watchlist — user's tracked symbols stored in Postgres.
 - get_proposals — current pending trade proposals awaiting approval.
 - propose_trade — create a new pending proposal. Does NOT execute. The user approves in the dashboard.
+- save_insight — save a research note or market insight. Use this when the finding is outside the Alpaca/US-equities execution path (e.g. Polymarket prediction markets, macro research, Finviz screens that the user will review manually). The user reads saved insights in the dashboard.
+- web_search — server-side web search. Use for current events, news beyond Alpaca's feed, Polymarket/Finviz/TradingView context.
+- web_fetch — fetch a specific URL. Use for hitting JSON APIs like https://gamma-api.polymarket.com/markets directly.
+
+Output type by scanner context:
+- alpaca scanner → propose_trade for watchlist symbols.
+- tradingview scanner → web_search for setups, then propose_trade. You are permitted to propose trades on symbols OUTSIDE the watchlist for this scanner — the whitelist guardrail is relaxed for discoveries. Other guardrails still apply.
+- polymarket scanner → web_fetch the polymarket API, analyze, save_insight. DO NOT call propose_trade — there is no execution path for Polymarket.
+- finviz research → web_search to run screens, analyze the top results, save_insight with a research_report. DO NOT call propose_trade unless the user explicitly asks for trade proposals — this is a research run.
+- chat turns → propose_trade is fine for any explicit user request on equities; save_insight is fine for analytical deliverables.
 
 Think before you act. Plan tool calls in parallel when they are independent. Don't chain unnecessary calls.`;
 
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: Anthropic.Messages.ToolUnion[] = [
   {
     name: "get_account",
     description:
@@ -252,12 +262,54 @@ const TOOLS: Anthropic.Tool[] = [
       ],
     },
   },
+  {
+    name: "save_insight",
+    description:
+      "Save a research insight, market note, or analysis report to the insights table. Use this instead of propose_trade when the opportunity is outside the Alpaca/US-equities execution path (e.g. Polymarket prediction markets, macro research, Finviz screens). The user reads saved insights in the dashboard and acts on them manually. Title should be terse; body can be multi-paragraph markdown.",
+    input_schema: {
+      type: "object",
+      properties: {
+        source: {
+          type: "string",
+          enum: ["tradingview", "polymarket", "finviz", "chat", "other"],
+          description: "Which source surfaced this insight",
+        },
+        kind: {
+          type: "string",
+          enum: ["market_insight", "research_report"],
+          description:
+            "market_insight for brief notes on a specific opportunity; research_report for longer multi-item analyses",
+        },
+        title: {
+          type: "string",
+          description: "Short headline, ≤120 chars",
+          maxLength: 200,
+        },
+        body: {
+          type: "string",
+          description:
+            "Full content. Markdown allowed. Cite data sources. Be specific.",
+          minLength: 50,
+        },
+        symbols: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            "Relevant tickers or market slugs (e.g. ['NVDA','AAPL'] or ['polymarket-will-X-happen'])",
+        },
+      },
+      required: ["source", "kind", "title", "body"],
+    },
+  },
+  { type: "web_search_20260209", name: "web_search" },
+  { type: "web_fetch_20260209", name: "web_fetch" },
 ];
 
 type ToolInput = Record<string, unknown>;
 
 type ExecContext = {
   runId: number;
+  bypassWhitelist?: boolean;
 };
 
 async function executeTool(
@@ -386,15 +438,18 @@ async function executeTool(
         );
       }
 
-      const check = await validateProposal({
-        symbol: p.symbol,
-        side: p.side,
-        qty: p.qty,
-        order_type: p.order_type,
-        limit_price: p.limit_price,
-        stop_loss: p.stop_loss,
-        take_profit: p.take_profit,
-      });
+      const check = await validateProposal(
+        {
+          symbol: p.symbol,
+          side: p.side,
+          qty: p.qty,
+          order_type: p.order_type,
+          limit_price: p.limit_price,
+          stop_loss: p.stop_loss,
+          take_profit: p.take_profit,
+        },
+        { bypassWhitelist: ctx.bypassWhitelist }
+      );
       if (!check.ok) {
         return JSON.stringify({
           created: false,
@@ -433,6 +488,34 @@ async function executeTool(
           "Proposal created. User must approve or reject in the dashboard before it executes.",
       });
     }
+    case "save_insight": {
+      const i = input as {
+        source: string;
+        kind: string;
+        title: string;
+        body: string;
+        symbols?: string[];
+      };
+      const { rows } = await db.query(
+        `INSERT INTO insights (source, kind, agent_run_id, title, body, symbols)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, created_at`,
+        [
+          i.source,
+          i.kind,
+          ctx.runId,
+          i.title.slice(0, 200),
+          i.body,
+          i.symbols ?? null,
+        ]
+      );
+      return JSON.stringify({
+        saved: true,
+        insight_id: rows[0].id,
+        created_at: rows[0].created_at,
+        message: "Insight saved. The user can read it in the dashboard.",
+      });
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -463,12 +546,13 @@ export type AgentEvent =
 
 export type RunAgentOptions = {
   messages: Anthropic.MessageParam[];
-  trigger: "chat" | "cron" | "manual";
+  trigger: string;
   onEvent: (event: AgentEvent) => void | Promise<void>;
+  bypassWhitelist?: boolean;
 };
 
 export async function runAgent(opts: RunAgentOptions): Promise<void> {
-  const { onEvent, trigger } = opts;
+  const { onEvent, trigger, bypassWhitelist } = opts;
   let { messages } = opts;
 
   const runInsert = await db.query(
@@ -553,7 +637,7 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
           const result = await executeTool(
             tool.name,
             tool.input as ToolInput,
-            { runId }
+            { runId, bypassWhitelist }
           );
           toolResults.push({
             type: "tool_result",

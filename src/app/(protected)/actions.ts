@@ -5,7 +5,11 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { createOrder } from "@/lib/alpaca";
 import { validateProposal } from "@/lib/guardrails";
-import { runScheduledScan, type ScanResult } from "@/lib/scheduled-scan";
+import {
+  runScan,
+  type ScanResult,
+  type ScannerKey,
+} from "@/lib/scheduled-scan";
 
 async function requireAuth() {
   const session = await getSession();
@@ -170,51 +174,72 @@ export async function removeFromWatchlist(
   return { ok: true, message: `Removed ${res.rows[0].symbol}.` };
 }
 
-const ALLOWED_INTERVALS = [5, 10, 15, 30, 60, 120] as const;
+const ALLOWED_INTERVALS = [5, 10, 15, 30, 60, 120, 240] as const;
+const SCHEDULED_KEYS: ScannerKey[] = ["alpaca", "tradingview", "polymarket"];
 
-export async function setCronEnabled(
+function isScheduledKey(k: string): k is ScannerKey {
+  return (SCHEDULED_KEYS as string[]).includes(k);
+}
+
+export async function setScannerEnabled(
+  scannerKey: string,
   enabled: boolean
 ): Promise<ActionResult> {
   await requireAuth();
+  if (!isScheduledKey(scannerKey)) {
+    return { ok: false, error: `Unknown scheduled scanner: ${scannerKey}` };
+  }
   await db.query(
-    `INSERT INTO cron_config (id, enabled, interval_minutes, updated_at)
-     VALUES (1, $1, 15, NOW())
-     ON CONFLICT (id) DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = NOW()`,
-    [enabled]
+    `INSERT INTO scanner_config (scanner_key, enabled, interval_minutes, updated_at)
+     VALUES ($1, $2, 15, NOW())
+     ON CONFLICT (scanner_key) DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = NOW()`,
+    [scannerKey, enabled]
   );
   revalidatePath("/");
   return {
     ok: true,
-    message: enabled ? "Scheduled scans enabled." : "Scheduled scans paused.",
+    message: `${scannerKey} ${enabled ? "enabled" : "paused"}.`,
   };
 }
 
-export async function setCronInterval(
+export async function setScannerInterval(
+  scannerKey: string,
   minutes: number
 ): Promise<ActionResult> {
   await requireAuth();
-  if (!ALLOWED_INTERVALS.includes(minutes as (typeof ALLOWED_INTERVALS)[number])) {
+  if (!isScheduledKey(scannerKey)) {
+    return { ok: false, error: `Unknown scheduled scanner: ${scannerKey}` };
+  }
+  if (
+    !ALLOWED_INTERVALS.includes(minutes as (typeof ALLOWED_INTERVALS)[number])
+  ) {
     return {
       ok: false,
       error: `Interval must be one of ${ALLOWED_INTERVALS.join(", ")}`,
     };
   }
   await db.query(
-    `INSERT INTO cron_config (id, enabled, interval_minutes, updated_at)
-     VALUES (1, TRUE, $1, NOW())
-     ON CONFLICT (id) DO UPDATE SET interval_minutes = EXCLUDED.interval_minutes, updated_at = NOW()`,
-    [minutes]
+    `INSERT INTO scanner_config (scanner_key, enabled, interval_minutes, updated_at)
+     VALUES ($1, TRUE, $2, NOW())
+     ON CONFLICT (scanner_key) DO UPDATE SET interval_minutes = EXCLUDED.interval_minutes, updated_at = NOW()`,
+    [scannerKey, minutes]
   );
   revalidatePath("/");
-  return { ok: true, message: `Interval set to ${minutes} minutes.` };
+  return {
+    ok: true,
+    message: `${scannerKey} interval set to ${minutes} minutes.`,
+  };
 }
 
-export async function runCronNow(): Promise<
-  ActionResult & { result?: ScanResult }
-> {
+export async function runScannerNow(
+  scannerKey: string
+): Promise<ActionResult & { result?: ScanResult }> {
   await requireAuth();
+  if (!isScheduledKey(scannerKey)) {
+    return { ok: false, error: `Unknown scheduled scanner: ${scannerKey}` };
+  }
   try {
-    const result = await runScheduledScan({ force: true });
+    const result = await runScan(scannerKey, { force: true });
     revalidatePath("/");
     if (!result.ok) {
       return {
@@ -223,11 +248,46 @@ export async function runCronNow(): Promise<
         result,
       };
     }
+    const pieces: string[] = [];
+    if (result.skipped) pieces.push(`skipped: ${result.skipped}`);
+    if (result.proposals_created !== undefined && result.proposals_created > 0)
+      pieces.push(`${result.proposals_created} proposals`);
+    if (result.insights_saved !== undefined && result.insights_saved > 0)
+      pieces.push(`${result.insights_saved} insights`);
     return {
       ok: true,
-      message: result.skipped
-        ? `Skipped: ${result.skipped}`
-        : `Scan complete — ${result.symbols_scanned} scanned, ${result.proposals_created} proposals.`,
+      message: pieces.length > 0 ? pieces.join(" · ") : "Scan complete.",
+      result,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message };
+  }
+}
+
+export async function runResearch(
+  query?: string
+): Promise<ActionResult & { result?: ScanResult }> {
+  await requireAuth();
+  try {
+    const result = await runScan("finviz", {
+      force: true,
+      query: query?.trim() || undefined,
+    });
+    revalidatePath("/");
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error ?? "Research failed",
+        result,
+      };
+    }
+    return {
+      ok: true,
+      message:
+        result.insights_saved && result.insights_saved > 0
+          ? `Research complete — ${result.insights_saved} report saved.`
+          : "Research complete — no report was saved (check recent runs).",
       result,
     };
   } catch (e) {

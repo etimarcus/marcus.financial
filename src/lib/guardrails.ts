@@ -87,7 +87,8 @@ async function getWatchlistSet(): Promise<Set<string>> {
 }
 
 export async function validateProposal(
-  proposal: ProposalLike
+  proposal: ProposalLike,
+  opts: { bypassWhitelist?: boolean } = {}
 ): Promise<GuardrailResult> {
   const config = readGuardrailConfig();
   const violations: string[] = [];
@@ -95,7 +96,7 @@ export async function validateProposal(
   const [account, tradesToday, watchlist, refPrice] = await Promise.all([
     getAccount(),
     getTradesTodayCount(),
-    config.whitelistMode === "watchlist"
+    config.whitelistMode === "watchlist" && !opts.bypassWhitelist
       ? getWatchlistSet()
       : Promise.resolve(new Set<string>()),
     getReferencePrice(proposal),
@@ -106,7 +107,7 @@ export async function validateProposal(
   const dayReturnPct =
     lastEquity > 0 ? ((equity - lastEquity) / lastEquity) * 100 : 0;
 
-  if (config.whitelistMode === "watchlist") {
+  if (config.whitelistMode === "watchlist" && !opts.bypassWhitelist) {
     const sym = proposal.symbol.toUpperCase();
     if (!watchlist.has(sym)) {
       violations.push(

@@ -14,7 +14,13 @@ import {
   type WatchlistEntry,
 } from "./watchlist-panel";
 import { GuardrailsPanel } from "./guardrails-panel";
-import { CronPanel, type CronPanelProps } from "./cron-panel";
+import {
+  ScannersPanel,
+  type ScannersPanelProps,
+  type ScannerRow,
+} from "./scanners-panel";
+import { InsightsPanel, type InsightRow } from "./insights-panel";
+import { loadAllScannerConfigs } from "@/lib/scheduled-scan";
 
 function fmtUsd(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -49,48 +55,84 @@ async function getWatchlist(): Promise<WatchlistEntry[]> {
   return rows as WatchlistEntry[];
 }
 
-async function getCronPanelData(): Promise<CronPanelProps> {
-  await db.query(
-    `INSERT INTO cron_config (id, enabled, interval_minutes)
-     VALUES (1, TRUE, 15)
-     ON CONFLICT (id) DO NOTHING`
-  );
-  const { rows: cfgRows } = await db.query<{
-    enabled: boolean;
-    interval_minutes: number;
-    last_run_at: string | null;
-  }>(
-    "SELECT enabled, interval_minutes, last_run_at FROM cron_config WHERE id = 1"
-  );
-  const cfg = cfgRows[0];
+const SCANNER_META: Record<
+  "alpaca" | "tradingview" | "polymarket",
+  { label: string; description: string }
+> = {
+  alpaca: {
+    label: "Alpaca watchlist",
+    description: "Scans your watchlist and proposes equity trades",
+  },
+  tradingview: {
+    label: "TradingView",
+    description:
+      "Discovers setups outside the watchlist (whitelist relaxed)",
+  },
+  polymarket: {
+    label: "Polymarket",
+    description: "Research-only. Saves insights, no trades",
+  },
+};
+
+function isoish(value: unknown): string {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
+async function getScannersPanelData(): Promise<ScannersPanelProps> {
+  const configs = await loadAllScannerConfigs();
+  const scanners: ScannerRow[] = configs
+    .filter((c): c is typeof c & {
+      scanner_key: "alpaca" | "tradingview" | "polymarket";
+    } => c.scanner_key in SCANNER_META)
+    .map((c) => ({
+      key: c.scanner_key,
+      label: SCANNER_META[c.scanner_key].label,
+      description: SCANNER_META[c.scanner_key].description,
+      enabled: c.enabled,
+      intervalMinutes: c.interval_minutes,
+      lastRunAt: c.last_run_at ? isoish(c.last_run_at) : null,
+    }));
 
   const { rows: runs } = await db.query(
-    `SELECT id, started_at, finished_at, cost_usd, summary, error
+    `SELECT id, trigger, started_at, finished_at, cost_usd, summary, error
        FROM agent_runs
-      WHERE trigger = 'cron'
+      WHERE trigger LIKE '%-scan' OR trigger = 'cron'
       ORDER BY started_at DESC
       LIMIT 10`
   );
 
   return {
-    enabled: cfg.enabled,
-    intervalMinutes: cfg.interval_minutes,
-    lastRunAt: cfg.last_run_at,
+    scanners,
     recentRuns: runs.map((r) => ({
       id: r.id,
-      started_at: r.started_at.toISOString
-        ? r.started_at.toISOString()
-        : r.started_at,
-      finished_at: r.finished_at
-        ? r.finished_at.toISOString
-          ? r.finished_at.toISOString()
-          : r.finished_at
-        : null,
+      trigger: r.trigger,
+      started_at: isoish(r.started_at),
+      finished_at: r.finished_at ? isoish(r.finished_at) : null,
       cost_usd: r.cost_usd != null ? String(r.cost_usd) : null,
       summary: r.summary,
       error: r.error,
     })),
   };
+}
+
+async function getInsights(): Promise<InsightRow[]> {
+  const { rows } = await db.query(
+    `SELECT id, source, kind, title, body, symbols, created_at
+       FROM insights
+      ORDER BY created_at DESC
+      LIMIT 20`
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    source: r.source,
+    kind: r.kind,
+    title: r.title,
+    body: r.body,
+    symbols: r.symbols,
+    created_at: isoish(r.created_at),
+  })) as InsightRow[];
 }
 
 export default async function Dashboard() {
@@ -99,24 +141,26 @@ export default async function Dashboard() {
   let clock;
   let proposals: PendingProposal[] = [];
   let watchlist: WatchlistEntry[] = [];
-  let cronData: CronPanelProps | null = null;
+  let scannersData: ScannersPanelProps | null = null;
+  let insights: InsightRow[] = [];
   let error: string | null = null;
 
   try {
-    [account, positions, clock, proposals, watchlist, cronData] =
+    [account, positions, clock, proposals, watchlist, scannersData, insights] =
       await Promise.all([
         getAccount(),
         getPositions(),
         getClock(),
         getPendingProposals(),
         getWatchlist(),
-        getCronPanelData(),
+        getScannersPanelData(),
+        getInsights(),
       ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  if (error || !account || !clock || !cronData) {
+  if (error || !account || !clock || !scannersData) {
     return (
       <main className="p-6 max-w-6xl mx-auto">
         <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-5 text-sm text-red-300">
@@ -221,7 +265,9 @@ export default async function Dashboard() {
         )}
       </section>
 
-      <CronPanel {...cronData} />
+      <ScannersPanel {...scannersData} />
+
+      <InsightsPanel insights={insights} />
 
       <WatchlistPanel entries={watchlist} />
     </main>
