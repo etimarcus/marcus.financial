@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { addToWatchlist, removeFromWatchlist } from "./actions";
+import type { AlpacaSnapshot, AlpacaNewsArticle } from "@/lib/alpaca";
 
 export type WatchlistEntry = {
   id: number;
@@ -10,10 +11,95 @@ export type WatchlistEntry = {
   created_at: string;
 };
 
+function fmtUsd(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+function fmtCompact(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function timeAgo(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
+type RowMetrics = {
+  price: number | null;
+  prevClose: number | null;
+  change: number | null;
+  changePct: number | null;
+  dayOpen: number | null;
+  dayHigh: number | null;
+  dayLow: number | null;
+  volume: number | null;
+  gapPct: number | null;
+  unusualMove: boolean;
+  unusualGap: boolean;
+};
+
+function computeMetrics(snapshot: AlpacaSnapshot | undefined): RowMetrics {
+  const price = snapshot?.latestTrade?.p ?? snapshot?.minuteBar?.c ?? null;
+  const prevClose = snapshot?.prevDailyBar?.c ?? null;
+  const dayOpen = snapshot?.dailyBar?.o ?? null;
+  const dayHigh = snapshot?.dailyBar?.h ?? null;
+  const dayLow = snapshot?.dailyBar?.l ?? null;
+  const volume = snapshot?.dailyBar?.v ?? null;
+
+  let change: number | null = null;
+  let changePct: number | null = null;
+  if (price != null && prevClose != null && prevClose > 0) {
+    change = price - prevClose;
+    changePct = change / prevClose;
+  }
+
+  let gapPct: number | null = null;
+  if (dayOpen != null && prevClose != null && prevClose > 0) {
+    gapPct = (dayOpen - prevClose) / prevClose;
+  }
+
+  const unusualMove = changePct != null && Math.abs(changePct) >= 0.03;
+  const unusualGap = gapPct != null && Math.abs(gapPct) >= 0.01;
+
+  return {
+    price,
+    prevClose,
+    change,
+    changePct,
+    dayOpen,
+    dayHigh,
+    dayLow,
+    volume,
+    gapPct,
+    unusualMove,
+    unusualGap,
+  };
+}
+
 export function WatchlistPanel({
   entries,
+  snapshots,
+  newsBySymbol,
 }: {
   entries: WatchlistEntry[];
+  snapshots: Record<string, AlpacaSnapshot>;
+  newsBySymbol: Record<string, AlpacaNewsArticle[]>;
 }) {
   const [symbol, setSymbol] = useState("");
   const [notes, setNotes] = useState("");
@@ -86,34 +172,192 @@ export function WatchlistPanel({
             No symbols yet. Add some to enable scheduled scans.
           </div>
         ) : (
-          <ul className="divide-y divide-white/[0.04]">
-            {entries.map((e) => (
-              <li
-                key={e.id}
-                className="flex items-center justify-between py-2.5 gap-3 group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="font-mono font-semibold text-zinc-100 tabular-nums">
-                    {e.symbol}
-                  </span>
-                  {e.notes && (
-                    <span className="text-xs text-zinc-500 truncate">
-                      {e.notes}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleRemove(e.id)}
+          <div className="divide-y divide-white/[0.04]">
+            {entries.map((e) => {
+              const metrics = computeMetrics(snapshots[e.symbol]);
+              const news = newsBySymbol[e.symbol.toUpperCase()] ?? [];
+              return (
+                <WatchlistRow
+                  key={e.id}
+                  entry={e}
+                  metrics={metrics}
+                  news={news}
                   disabled={isPending}
-                  className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-red-400 disabled:opacity-50 transition-colors opacity-0 group-hover:opacity-100"
-                >
-                  Remove
-                </button>
-              </li>
-            ))}
-          </ul>
+                  onRemove={() => handleRemove(e.id)}
+                />
+              );
+            })}
+          </div>
         )}
       </div>
     </section>
+  );
+}
+
+function WatchlistRow({
+  entry,
+  metrics,
+  news,
+  disabled,
+  onRemove,
+}: {
+  entry: WatchlistEntry;
+  metrics: RowMetrics;
+  news: AlpacaNewsArticle[];
+  disabled: boolean;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const hasData = metrics.price != null;
+  const changeTone =
+    metrics.change == null
+      ? "text-zinc-500"
+      : metrics.change >= 0
+        ? "text-profit"
+        : "text-loss";
+
+  return (
+    <div className="py-2.5">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-3 text-left hover:bg-white/[0.02] transition-colors -mx-2 px-2 py-1 rounded-lg"
+      >
+        <span className="text-zinc-600 text-xs w-3">
+          {expanded ? "▾" : "▸"}
+        </span>
+        <span className="font-mono font-semibold text-zinc-100 w-16 tabular-nums">
+          {entry.symbol}
+        </span>
+        <span
+          className={`font-mono tabular-nums text-sm w-24 ${
+            hasData ? "text-zinc-100" : "text-zinc-600"
+          }`}
+        >
+          {hasData ? fmtUsd(metrics.price!) : "—"}
+        </span>
+        <span
+          className={`font-mono tabular-nums text-sm w-28 ${changeTone}`}
+        >
+          {metrics.change != null
+            ? `${metrics.change >= 0 ? "+" : ""}${metrics.change.toFixed(2)}`
+            : "—"}
+          {metrics.changePct != null && (
+            <span className="ml-1 text-xs opacity-80">
+              ({metrics.changePct >= 0 ? "+" : ""}
+              {(metrics.changePct * 100).toFixed(2)}%)
+            </span>
+          )}
+        </span>
+        <span className="font-mono tabular-nums text-xs text-zinc-500 w-16">
+          V {metrics.volume != null ? fmtCompact(metrics.volume) : "—"}
+        </span>
+        <div className="flex items-center gap-1 flex-1 justify-end">
+          {metrics.unusualMove && (
+            <span
+              className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-loss/40 text-loss"
+              title={`Move of ${((metrics.changePct ?? 0) * 100).toFixed(2)}% — outside normal range`}
+            >
+              move
+            </span>
+          )}
+          {metrics.unusualGap && (
+            <span
+              className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border border-accent/40 text-accent-light"
+              title={`Gap of ${((metrics.gapPct ?? 0) * 100).toFixed(2)}% at open`}
+            >
+              gap
+            </span>
+          )}
+          {news.length > 0 && (
+            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+              📰 {news.length}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="mt-3 ml-6 pl-4 border-l border-white/[0.08] space-y-3 pb-1">
+          {entry.notes && (
+            <div className="text-xs text-zinc-400">
+              <span className="text-zinc-600 font-mono uppercase tracking-wider text-[10px]">
+                note ·{" "}
+              </span>
+              {entry.notes}
+            </div>
+          )}
+          {hasData && (
+            <div className="text-xs text-zinc-400 space-x-3 font-mono tabular-nums">
+              {metrics.dayOpen != null && (
+                <span>
+                  <span className="text-zinc-600">open</span>{" "}
+                  {fmtUsd(metrics.dayOpen)}
+                </span>
+              )}
+              {metrics.dayLow != null && metrics.dayHigh != null && (
+                <span>
+                  <span className="text-zinc-600">day range</span>{" "}
+                  {fmtUsd(metrics.dayLow)} – {fmtUsd(metrics.dayHigh)}
+                </span>
+              )}
+              {metrics.prevClose != null && (
+                <span>
+                  <span className="text-zinc-600">prev close</span>{" "}
+                  {fmtUsd(metrics.prevClose)}
+                </span>
+              )}
+              {metrics.gapPct != null && (
+                <span>
+                  <span className="text-zinc-600">gap</span>{" "}
+                  {metrics.gapPct >= 0 ? "+" : ""}
+                  {(metrics.gapPct * 100).toFixed(2)}%
+                </span>
+              )}
+            </div>
+          )}
+          {news.length > 0 ? (
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
+                recent news
+              </div>
+              <ul className="space-y-1">
+                {news.slice(0, 5).map((article) => (
+                  <li key={article.id} className="text-xs">
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-zinc-300 hover:text-accent-light transition-colors"
+                    >
+                      {article.headline}
+                    </a>
+                    <span className="ml-2 text-zinc-600 font-mono text-[10px]">
+                      {article.source} · {timeAgo(article.created_at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="text-[11px] text-zinc-600 italic">
+              No recent news.
+            </div>
+          )}
+          <div className="pt-1">
+            <button
+              onClick={(ev) => {
+                ev.stopPropagation();
+                onRemove();
+              }}
+              disabled={disabled}
+              className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 hover:text-red-400 disabled:opacity-50 transition-colors"
+            >
+              Remove symbol
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

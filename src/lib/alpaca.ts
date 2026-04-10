@@ -188,6 +188,26 @@ export function getLatestTrade(symbol: string): Promise<AlpacaLatestTrade> {
   );
 }
 
+export type AlpacaSnapshot = {
+  latestTrade?: { t: string; p: number; s: number };
+  latestQuote?: { t: string; bp: number; ap: number; bs: number; as: number };
+  minuteBar?: AlpacaBar;
+  dailyBar?: AlpacaBar;
+  prevDailyBar?: AlpacaBar;
+};
+
+export async function getSnapshots(
+  symbols: string[]
+): Promise<Record<string, AlpacaSnapshot>> {
+  if (symbols.length === 0) return {};
+  const params = new URLSearchParams({
+    symbols: symbols.map((s) => s.toUpperCase()).join(","),
+  });
+  return dataGet<Record<string, AlpacaSnapshot>>(
+    `/v2/stocks/snapshots?${params}`
+  );
+}
+
 export function createOrder(params: CreateOrderParams): Promise<AlpacaOrder> {
   const body: Record<string, unknown> = {
     symbol: params.symbol.toUpperCase(),

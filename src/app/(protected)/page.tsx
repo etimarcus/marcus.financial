@@ -1,8 +1,12 @@
 import {
   getAccount,
   getClock,
+  getNews,
   getPositions,
+  getSnapshots,
+  type AlpacaNewsArticle,
   type AlpacaPosition,
+  type AlpacaSnapshot,
 } from "@/lib/alpaca";
 import { db } from "@/lib/db";
 import {
@@ -48,11 +52,38 @@ async function getPendingProposals(): Promise<PendingProposal[]> {
   return rows as PendingProposal[];
 }
 
-async function getWatchlist(): Promise<WatchlistEntry[]> {
+async function getWatchlistWithMarketData(): Promise<{
+  entries: WatchlistEntry[];
+  snapshots: Record<string, AlpacaSnapshot>;
+  newsBySymbol: Record<string, AlpacaNewsArticle[]>;
+}> {
   const { rows } = await db.query(
     "SELECT id, symbol, notes, created_at FROM watchlist ORDER BY symbol"
   );
-  return rows as WatchlistEntry[];
+  const entries = rows as WatchlistEntry[];
+  if (entries.length === 0) {
+    return { entries, snapshots: {}, newsBySymbol: {} };
+  }
+  const symbols = entries.map((e) => e.symbol);
+  const [snapshotsResult, newsResult] = await Promise.allSettled([
+    getSnapshots(symbols),
+    getNews(symbols, Math.min(50, symbols.length * 5)),
+  ]);
+  const snapshots =
+    snapshotsResult.status === "fulfilled" ? snapshotsResult.value : {};
+  const newsBySymbol: Record<string, AlpacaNewsArticle[]> = {};
+  if (newsResult.status === "fulfilled") {
+    for (const article of newsResult.value.news) {
+      for (const sym of article.symbols ?? []) {
+        const key = sym.toUpperCase();
+        if (!newsBySymbol[key]) newsBySymbol[key] = [];
+        if (newsBySymbol[key].length < 5) {
+          newsBySymbol[key].push(article);
+        }
+      }
+    }
+  }
+  return { entries, snapshots, newsBySymbol };
 }
 
 const SCANNER_META: Record<
@@ -140,25 +171,40 @@ export default async function Dashboard() {
   let positions: AlpacaPosition[] = [];
   let clock;
   let proposals: PendingProposal[] = [];
-  let watchlist: WatchlistEntry[] = [];
+  let watchlistResult: {
+    entries: WatchlistEntry[];
+    snapshots: Record<string, AlpacaSnapshot>;
+    newsBySymbol: Record<string, AlpacaNewsArticle[]>;
+  } = { entries: [], snapshots: {}, newsBySymbol: {} };
   let scannersData: ScannersPanelProps | null = null;
   let insights: InsightRow[] = [];
   let error: string | null = null;
 
   try {
-    [account, positions, clock, proposals, watchlist, scannersData, insights] =
-      await Promise.all([
-        getAccount(),
-        getPositions(),
-        getClock(),
-        getPendingProposals(),
-        getWatchlist(),
-        getScannersPanelData(),
-        getInsights(),
-      ]);
+    [
+      account,
+      positions,
+      clock,
+      proposals,
+      watchlistResult,
+      scannersData,
+      insights,
+    ] = await Promise.all([
+      getAccount(),
+      getPositions(),
+      getClock(),
+      getPendingProposals(),
+      getWatchlistWithMarketData(),
+      getScannersPanelData(),
+      getInsights(),
+    ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
+
+  const watchlist = watchlistResult.entries;
+  const watchlistSnapshots = watchlistResult.snapshots;
+  const watchlistNews = watchlistResult.newsBySymbol;
 
   if (error || !account || !clock || !scannersData) {
     return (
@@ -269,7 +315,11 @@ export default async function Dashboard() {
 
       <InsightsPanel insights={insights} />
 
-      <WatchlistPanel entries={watchlist} />
+      <WatchlistPanel
+        entries={watchlist}
+        snapshots={watchlistSnapshots}
+        newsBySymbol={watchlistNews}
+      />
     </main>
   );
 }
