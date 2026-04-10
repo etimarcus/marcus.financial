@@ -43,9 +43,9 @@ type AgentEvent =
 const STORAGE_KEY = "marcus_chat_history_v1";
 
 const STARTERS = [
-  "Dame una vista general del mercado hoy",
-  "Análisis técnico de NVDA en timeframe diario",
-  "¿Qué noticias relevantes hay sobre mi portafolio?",
+  "Vista general del mercado hoy",
+  "Análisis técnico de NVDA en 1Day",
+  "Noticias sobre mi portafolio",
   "Busca oportunidades en la watchlist",
 ];
 
@@ -53,7 +53,7 @@ function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export default function ChatPage() {
+export function ChatInterface({ onClose }: { onClose?: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
@@ -203,48 +203,71 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="flex-1 flex flex-col h-[calc(100vh-73px)]">
-      <div className="border-b border-white/[0.06] px-6 py-4 flex items-center justify-between">
+    <div className="flex flex-col h-full">
+      <div className="border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
             <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
-              Analyst chat
+              Analyst
             </h1>
           </div>
-          <p className="text-[11px] text-zinc-500 mt-0.5 font-mono uppercase tracking-wider">
-            claude opus 4.6 · read + propose
+          <p className="text-[10px] text-zinc-500 mt-0.5 font-mono uppercase tracking-wider">
+            opus 4.6 · read + propose
           </p>
         </div>
-        <button
-          onClick={clear}
-          className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors"
-        >
-          Clear history
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={clear}
+            className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-200 transition-colors"
+          >
+            Clear
+          </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="text-zinc-500 hover:text-zinc-200 transition-colors"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8">
-        <div className="max-w-3xl mx-auto space-y-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="space-y-5">
           {messages.length === 0 && (
-            <div className="py-12">
-              <div className="text-center mb-8">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-black font-bold mb-4 shadow-[0_0_32px_rgba(34,211,238,0.3)]">
+            <div className="py-8">
+              <div className="text-center mb-6">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-black font-bold mb-3 shadow-[0_0_24px_rgba(34,211,238,0.3)]">
                   m
                 </div>
-                <h2 className="text-lg font-semibold text-zinc-100 mb-1">
+                <h2 className="text-base font-semibold text-zinc-100 mb-1">
                   Ready to analyze.
                 </h2>
-                <p className="text-sm text-zinc-500">
-                  Ask anything about markets, your portfolio, or a ticker.
+                <p className="text-xs text-zinc-500">
+                  Ask about markets, your portfolio, or a ticker.
                 </p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl mx-auto">
+              <div className="space-y-2">
                 {STARTERS.map((s) => (
                   <button
                     key={s}
                     onClick={() => sendWith(s)}
-                    className="text-left text-sm text-zinc-300 px-4 py-3 rounded-xl border border-white/[0.06] hover:border-cyan-400/30 hover:bg-cyan-500/[0.03] transition-colors"
+                    className="w-full text-left text-xs text-zinc-300 px-3 py-2.5 rounded-lg border border-white/[0.06] hover:border-cyan-400/30 hover:bg-cyan-500/[0.03] transition-colors"
                   >
                     {s}
                   </button>
@@ -258,7 +281,7 @@ export default function ChatPage() {
           ))}
 
           {pending && messages[messages.length - 1]?.text === "" && (
-            <div className="flex items-center gap-2 text-xs text-zinc-500 pl-11 font-mono">
+            <div className="flex items-center gap-2 text-[11px] text-zinc-500 pl-10 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
               thinking…
             </div>
@@ -266,8 +289,8 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className="border-t border-white/[0.06] bg-[#07090d]/80 backdrop-blur px-6 py-4">
-        <div className="max-w-3xl mx-auto flex items-end gap-2">
+      <div className="border-t border-white/[0.06] bg-[#07090d]/90 backdrop-blur px-4 py-3">
+        <div className="flex items-end gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -277,21 +300,21 @@ export default function ChatPage() {
                 send();
               }
             }}
-            placeholder={pending ? "Waiting for response…" : "Ask the agent…"}
+            placeholder={pending ? "Waiting…" : "Ask the agent…"}
             disabled={pending}
             rows={2}
-            className="flex-1 resize-none rounded-xl border border-white/[0.08] bg-zinc-950/60 px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-50 transition-colors"
+            className="flex-1 resize-none rounded-lg border border-white/[0.08] bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-50 transition-colors"
           />
           <button
             onClick={send}
             disabled={pending || !input.trim()}
-            className="rounded-xl bg-cyan-500 text-black px-4 py-3 text-sm font-semibold hover:bg-cyan-400 disabled:opacity-30 transition-colors"
+            className="rounded-lg bg-cyan-500 text-black px-3 py-2 text-sm font-semibold hover:bg-cyan-400 disabled:opacity-30 transition-colors"
           >
             Send
           </button>
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -301,8 +324,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-cyan-500/10 border border-cyan-400/20 px-4 py-3">
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-100">
+        <div className="max-w-[90%] rounded-xl rounded-tr-sm bg-cyan-500/10 border border-cyan-400/20 px-3 py-2">
+          <div className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-100">
             {message.text}
           </div>
         </div>
@@ -311,11 +334,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className="flex justify-start gap-3">
-      <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-black font-bold text-sm shadow-[0_0_16px_rgba(34,211,238,0.3)]">
+    <div className="flex justify-start gap-2">
+      <div className="flex-shrink-0 h-7 w-7 rounded-md bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-black font-bold text-xs shadow-[0_0_12px_rgba(34,211,238,0.3)]">
         m
       </div>
-      <div className="flex-1 min-w-0 space-y-2 pt-0.5">
+      <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
         {message.toolCalls.length > 0 && (
           <div className="space-y-1">
             {message.toolCalls.map((tc) => (
@@ -324,7 +347,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
         {message.text && (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
+          <div className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-200">
             {message.text}
           </div>
         )}
@@ -347,22 +370,22 @@ function ToolChip({ toolCall }: { toolCall: ToolCall }) {
   }[status];
 
   return (
-    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] text-xs overflow-hidden">
+    <div className="rounded-md border border-white/[0.06] bg-white/[0.02] text-[10px] overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full text-left px-3 py-1.5 hover:bg-white/[0.03] transition-colors"
+        className="flex items-center gap-1.5 w-full text-left px-2 py-1 hover:bg-white/[0.03] transition-colors"
       >
         <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
         <span className="font-mono text-cyan-300">{toolCall.name}</span>
-        <span className="text-zinc-500 truncate flex-1 font-mono text-[10px]">
+        <span className="text-zinc-500 truncate flex-1 font-mono">
           {JSON.stringify(toolCall.input)}
         </span>
         <span className="text-zinc-600">{open ? "▾" : "▸"}</span>
       </button>
       {open && toolCall.result && (
-        <pre className="px-3 pb-2 pt-1 text-[10px] leading-tight overflow-x-auto max-h-48 text-zinc-400 font-mono border-t border-white/[0.04]">
-          {toolCall.result.slice(0, 4000)}
-          {toolCall.result.length > 4000 && "…"}
+        <pre className="px-2 pb-1.5 pt-1 leading-tight overflow-x-auto max-h-40 text-zinc-400 font-mono border-t border-white/[0.04]">
+          {toolCall.result.slice(0, 3000)}
+          {toolCall.result.length > 3000 && "…"}
         </pre>
       )}
     </div>
