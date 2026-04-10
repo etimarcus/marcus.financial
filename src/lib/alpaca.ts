@@ -172,6 +172,22 @@ export type CreateOrderParams = {
   time_in_force?: "day" | "gtc";
 };
 
+export type AlpacaLatestTrade = {
+  symbol: string;
+  trade: {
+    t: string;
+    p: number;
+    s: number;
+    x: string;
+  };
+};
+
+export function getLatestTrade(symbol: string): Promise<AlpacaLatestTrade> {
+  return dataGet<AlpacaLatestTrade>(
+    `/v2/stocks/${encodeURIComponent(symbol)}/trades/latest`
+  );
+}
+
 export function createOrder(params: CreateOrderParams): Promise<AlpacaOrder> {
   const body: Record<string, unknown> = {
     symbol: params.symbol.toUpperCase(),

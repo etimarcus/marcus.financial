@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { createOrder } from "@/lib/alpaca";
+import { validateProposal } from "@/lib/guardrails";
 
 async function requireAuth() {
   const session = await getSession();
@@ -32,6 +33,25 @@ export async function approveProposal(
   if (!proposal) return { ok: false, error: "Proposal not found" };
   if (proposal.status !== "pending") {
     return { ok: false, error: `Proposal is already ${proposal.status}` };
+  }
+
+  const check = await validateProposal({
+    symbol: proposal.symbol,
+    side: proposal.side,
+    qty: Number(proposal.qty),
+    order_type: proposal.order_type,
+    limit_price:
+      proposal.limit_price != null ? Number(proposal.limit_price) : null,
+    stop_loss:
+      proposal.stop_loss != null ? Number(proposal.stop_loss) : null,
+    take_profit:
+      proposal.take_profit != null ? Number(proposal.take_profit) : null,
+  });
+  if (!check.ok) {
+    return {
+      ok: false,
+      error: `Guardrails blocked execution: ${check.violations.join(" · ")}`,
+    };
   }
 
   try {

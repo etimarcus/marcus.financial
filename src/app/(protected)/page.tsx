@@ -13,6 +13,7 @@ import {
   WatchlistPanel,
   type WatchlistEntry,
 } from "./watchlist-panel";
+import { GuardrailsPanel } from "./guardrails-panel";
 
 function fmtUsd(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -113,6 +114,8 @@ export default async function Dashboard() {
         <Stat label="Cash" value={fmtUsd(account.cash)} />
         <Stat label="Buying power" value={fmtUsd(account.buying_power)} />
       </section>
+
+      <GuardrailsPanel equity={equity} lastEquity={lastEquity} />
 
       <ProposalsPanel proposals={proposals} />
 

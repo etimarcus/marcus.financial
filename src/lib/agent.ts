@@ -9,6 +9,7 @@ import {
 } from "./alpaca";
 import { snapshot as indicatorSnapshot } from "./indicators";
 import { db } from "./db";
+import { validateProposal } from "./guardrails";
 
 const client = new Anthropic();
 const MODEL = "claude-opus-4-6";
@@ -32,6 +33,12 @@ Hard rules for proposing trades:
 5. confidence is a number 0-1 reflecting your honest conviction. Use it. A 0.5 means "slight edge"; 0.9 means "very strong setup". Overconfident proposals are worse than no proposal.
 6. Do not propose more than 3 trades in a single turn unless the user explicitly asked for a portfolio rebalance.
 7. If the user says "buy X" / "sell Y" directly, still call propose_trade — don't try to bypass the approval step by pretending the user already approved. The dashboard is the approval surface, not the chat.
+
+Risk guardrails (enforced in code — you cannot override):
+- Proposals are validated BEFORE being saved. If you hit a guardrail, propose_trade returns rejected_by_guardrails=true with a violations list.
+- The guardrails cover: symbol whitelist (defaults to the watchlist), maximum position size as % of equity, daily trade count cap, daily drawdown circuit breaker, and optional mandatory stop_loss.
+- When a proposal is rejected, READ the violations, adjust the trade to satisfy them (usually: reduce qty, add a stop_loss, or pick a symbol that's on the watchlist), and call propose_trade again. Do not argue with the guardrails — they are non-negotiable runtime checks.
+- If a symbol the user asked about is NOT on the watchlist, tell the user and offer to analyze it anyway, but do not try to propose a trade on it — the guardrail will block it.
 
 How to work:
 - Always ground claims in tool output. Never guess a price, a headline, or an indicator value.
@@ -378,6 +385,27 @@ async function executeTool(
           "stop_loss and take_profit require order_type='limit' (Alpaca bracket orders need a limit parent)"
         );
       }
+
+      const check = await validateProposal({
+        symbol: p.symbol,
+        side: p.side,
+        qty: p.qty,
+        order_type: p.order_type,
+        limit_price: p.limit_price,
+        stop_loss: p.stop_loss,
+        take_profit: p.take_profit,
+      });
+      if (!check.ok) {
+        return JSON.stringify({
+          created: false,
+          rejected_by_guardrails: true,
+          violations: check.violations,
+          context: check.context,
+          message:
+            "The proposal was rejected by risk guardrails and NOT saved. Adjust the trade to satisfy the rules (usually by reducing qty, adding a stop_loss, or choosing a symbol on the watchlist) and call propose_trade again.",
+        });
+      }
+
       const { rows } = await db.query(
         `INSERT INTO proposals
            (agent_run_id, symbol, side, qty, order_type, limit_price,
