@@ -43,10 +43,10 @@ type AgentEvent =
 const STORAGE_KEY = "marcus_chat_history_v1";
 
 const STARTERS = [
-  "Vista general del mercado hoy",
-  "Análisis técnico de NVDA en 1Day",
-  "Noticias sobre mi portafolio",
-  "Busca oportunidades en la watchlist",
+  "Market overview for today",
+  "Technical analysis of NVDA on the daily timeframe",
+  "Recent news on my portfolio",
+  "Look for setups across my watchlist",
 ];
 
 function uid() {
@@ -252,9 +252,6 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
           {messages.length === 0 && (
             <div className="py-8">
               <div className="text-center mb-6">
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-accent-dark text-black font-bold mb-3 shadow-[0_0_24px_rgba(86, 118, 220,0.3)]">
-                  m
-                </div>
                 <h2 className="text-base font-semibold text-zinc-100 mb-1">
                   Ready to analyze.
                 </h2>
