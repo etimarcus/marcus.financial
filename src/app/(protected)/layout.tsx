@@ -3,7 +3,6 @@ import { getSession } from "@/lib/session";
 import { logout } from "../login/actions";
 import { ChatDrawer } from "./chat-drawer";
 import { HeaderClock } from "./header-clock";
-import { BackgroundAmbience } from "./background-ambience";
 import { getAccount, getClock } from "@/lib/alpaca";
 
 export default async function ProtectedLayout({
@@ -51,7 +50,6 @@ export default async function ProtectedLayout({
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <BackgroundAmbience />
             <ChatDrawer />
             <form action={logout}>
               <button
