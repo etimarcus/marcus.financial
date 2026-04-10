@@ -65,7 +65,7 @@ export default async function ProtectedLayout({
         </div>
       </header>
 
-      <div className="px-6 py-8 max-w-6xl mx-auto w-full">
+      <div className="px-2 md:px-3 py-8">
         <a href="/" aria-label="marcus.financial home" className="inline-block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img

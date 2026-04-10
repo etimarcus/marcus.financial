@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const STORAGE_KEY = "marcus_ambience_enabled";
-const MASTER_LEVEL = 0.22;
+const MASTER_LEVEL = 0.12;
 
 export function BackgroundAmbience() {
   const [loaded, setLoaded] = useState(false);
@@ -11,8 +11,7 @@ export function BackgroundAmbience() {
 
   const ctxRef = useRef<AudioContext | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
-  const rainSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const thunderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const setupDoneRef = useRef(false);
 
   useEffect(() => {
@@ -30,12 +29,12 @@ export function BackgroundAmbience() {
     } catch {}
   }, [enabled, loaded]);
 
-  const scheduleThunder = useCallback(
+  const scheduleBurst = useCallback(
     (ctx: AudioContext, dest: AudioNode) => {
-      const delay = 12000 + Math.random() * 35000;
-      thunderTimerRef.current = setTimeout(() => {
-        playThunder(ctx, dest);
-        scheduleThunder(ctx, dest);
+      const delay = 1500 + Math.random() * 5500; // 1.5-7s between bursts
+      burstTimerRef.current = setTimeout(() => {
+        playBurst(ctx, dest);
+        scheduleBurst(ctx, dest);
       }, delay);
     },
     []
@@ -54,59 +53,37 @@ export function BackgroundAmbience() {
     const ctx = new AudioContextCtor();
     ctxRef.current = ctx;
 
+    // Master gain — fades in on enable, out on disable
     const master = ctx.createGain();
     master.gain.value = 0;
     master.connect(ctx.destination);
     masterGainRef.current = master;
 
-    // Pink noise buffer for rain
-    const bufferSize = 2 * ctx.sampleRate;
-    const rainBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = rainBuffer.getChannelData(0);
-    let b0 = 0,
-      b1 = 0,
-      b2 = 0,
-      b3 = 0,
-      b4 = 0,
-      b5 = 0,
-      b6 = 0;
-    for (let i = 0; i < bufferSize; i++) {
-      const white = Math.random() * 2 - 1;
-      b0 = 0.99886 * b0 + white * 0.0555179;
-      b1 = 0.99332 * b1 + white * 0.0750759;
-      b2 = 0.969 * b2 + white * 0.153852;
-      b3 = 0.8665 * b3 + white * 0.3104856;
-      b4 = 0.55 * b4 + white * 0.5329522;
-      b5 = -0.7616 * b5 - white * 0.016898;
-      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
-      b6 = white * 0.115926;
-    }
+    // A light feedback delay gives the birds a sense of space,
+    // like they're echoing off trees.
+    const delay = ctx.createDelay(1.5);
+    delay.delayTime.value = 0.22;
+    const delayFeedback = ctx.createGain();
+    delayFeedback.gain.value = 0.22;
+    const delayWet = ctx.createGain();
+    delayWet.gain.value = 0.35;
 
-    const rainSource = ctx.createBufferSource();
-    rainSource.buffer = rainBuffer;
-    rainSource.loop = true;
+    delay.connect(delayFeedback);
+    delayFeedback.connect(delay);
+    delay.connect(delayWet);
+    delayWet.connect(master);
 
-    const rainHighpass = ctx.createBiquadFilter();
-    rainHighpass.type = "highpass";
-    rainHighpass.frequency.value = 400;
+    // Dry path for chirps goes to both master and the delay input.
+    // We expose a single "dest" node that routes to both.
+    const chirpBus = ctx.createGain();
+    chirpBus.gain.value = 1;
+    chirpBus.connect(master);
+    chirpBus.connect(delay);
 
-    const rainLowpass = ctx.createBiquadFilter();
-    rainLowpass.type = "lowpass";
-    rainLowpass.frequency.value = 2800;
-    rainLowpass.Q.value = 0.7;
-
-    const rainGain = ctx.createGain();
-    rainGain.gain.value = 0.7;
-
-    rainSource.connect(rainHighpass);
-    rainHighpass.connect(rainLowpass);
-    rainLowpass.connect(rainGain);
-    rainGain.connect(master);
-    rainSource.start();
-    rainSourceRef.current = rainSource;
-
-    scheduleThunder(ctx, master);
-  }, [scheduleThunder]);
+    // Kick off the burst scheduler against the chirp bus
+    // Use a custom ref-like shape so scheduleBurst reaches the bus
+    scheduleBurst(ctx, chirpBus);
+  }, [scheduleBurst]);
 
   const fadeTo = useCallback((target: number) => {
     const ctx = ctxRef.current;
@@ -128,7 +105,6 @@ export function BackgroundAmbience() {
     };
 
     if (ctx.state === "suspended") {
-      // Wait for first user gesture to resume — browser autoplay policy
       const handler = () => {
         ctx
           .resume()
@@ -141,8 +117,6 @@ export function BackgroundAmbience() {
       document.addEventListener("click", handler);
       document.addEventListener("keydown", handler);
       document.addEventListener("touchstart", handler);
-
-      // Also try immediately in case the policy is lenient
       ctx.resume().then(apply).catch(() => {});
 
       return () => {
@@ -157,13 +131,7 @@ export function BackgroundAmbience() {
 
   useEffect(() => {
     return () => {
-      if (thunderTimerRef.current) clearTimeout(thunderTimerRef.current);
-      const src = rainSourceRef.current;
-      if (src) {
-        try {
-          src.stop();
-        } catch {}
-      }
+      if (burstTimerRef.current) clearTimeout(burstTimerRef.current);
       const ctx = ctxRef.current;
       if (ctx) {
         ctx.close().catch(() => {});
@@ -179,7 +147,7 @@ export function BackgroundAmbience() {
     <button
       onClick={() => setEnabled((v) => !v)}
       aria-label={enabled ? "Mute ambience" : "Unmute ambience"}
-      title={enabled ? "Mute storm" : "Unmute storm"}
+      title={enabled ? "Mute birds" : "Unmute birds"}
       className="text-zinc-500 hover:text-zinc-200 transition-colors"
     >
       {enabled ? (
@@ -219,35 +187,115 @@ export function BackgroundAmbience() {
   );
 }
 
-function playThunder(ctx: AudioContext, dest: AudioNode) {
-  const duration = 2.5 + Math.random() * 3;
-  const bufferSize = Math.floor(ctx.sampleRate * duration);
-  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
+type ChirpPreset = {
+  // Frequency sweep in Hz
+  startFreq: number;
+  endFreq: number;
+  // Duration in seconds
+  duration: number;
+  // Volume multiplier (0-1)
+  level: number;
+  // Optional vibrato depth in Hz and frequency in Hz
+  vibratoFreq?: number;
+  vibratoDepth?: number;
+};
 
-  // Irregular amplitude profile: a sharp initial crack + slower rumble
-  const crackDur = 0.15;
-  for (let i = 0; i < bufferSize; i++) {
-    const t = i / ctx.sampleRate;
-    const crack = t < crackDur ? (1 - t / crackDur) * 1.5 : 0;
-    const rumble = Math.exp(-t * 0.7) * (0.5 + 0.5 * Math.sin(t * 3));
-    const noise = Math.random() * 2 - 1;
-    data[i] = noise * (crack + rumble);
-  }
+// A handful of characterful chirp shapes. Pure sine sweeps with quick
+// envelopes — pleasant forest birds rather than noisy squawks.
+const CHIRP_PRESETS: ChirpPreset[] = [
+  // Sweet high "chip"
+  { startFreq: 3400, endFreq: 3900, duration: 0.08, level: 0.55 },
+  // Quick descending whistle
+  { startFreq: 3000, endFreq: 2400, duration: 0.11, level: 0.5 },
+  // Rising tweet
+  { startFreq: 2300, endFreq: 3400, duration: 0.14, level: 0.5 },
+  // Gentle mid "chip"
+  { startFreq: 2700, endFreq: 2900, duration: 0.09, level: 0.45 },
+  // Small trill with vibrato
+  {
+    startFreq: 3100,
+    endFreq: 3100,
+    duration: 0.22,
+    level: 0.4,
+    vibratoFreq: 22,
+    vibratoDepth: 180,
+  },
+  // High short chip
+  { startFreq: 4100, endFreq: 4500, duration: 0.06, level: 0.35 },
+  // Distant lower bird
+  { startFreq: 1800, endFreq: 2100, duration: 0.12, level: 0.35 },
+];
 
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-
-  const lowpass = ctx.createBiquadFilter();
-  lowpass.type = "lowpass";
-  lowpass.frequency.value = 320;
-  lowpass.Q.value = 1.4;
+function playChirp(
+  ctx: AudioContext,
+  dest: AudioNode,
+  when: number,
+  preset: ChirpPreset
+) {
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(preset.startFreq, when);
+  osc.frequency.linearRampToValueAtTime(preset.endFreq, when + preset.duration);
 
   const gain = ctx.createGain();
-  gain.gain.value = 1.6;
+  gain.gain.setValueAtTime(0, when);
+  // Gentle attack then smooth decay — no clicks
+  gain.gain.linearRampToValueAtTime(preset.level, when + 0.01);
+  gain.gain.exponentialRampToValueAtTime(
+    0.0001,
+    when + preset.duration + 0.02
+  );
 
-  source.connect(lowpass);
-  lowpass.connect(gain);
+  osc.connect(gain);
   gain.connect(dest);
-  source.start();
+
+  // Optional vibrato via a second oscillator modulating the main osc freq
+  let lfo: OscillatorNode | null = null;
+  let lfoGain: GainNode | null = null;
+  if (preset.vibratoFreq && preset.vibratoDepth) {
+    lfo = ctx.createOscillator();
+    lfo.frequency.value = preset.vibratoFreq;
+    lfoGain = ctx.createGain();
+    lfoGain.gain.value = preset.vibratoDepth;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    lfo.start(when);
+    lfo.stop(when + preset.duration + 0.05);
+  }
+
+  osc.start(when);
+  osc.stop(when + preset.duration + 0.05);
+}
+
+function playBurst(ctx: AudioContext, dest: AudioNode) {
+  // A burst is 1-4 chirps spaced closely, as if one bird is singing a
+  // short phrase. ~30% of the time play a "conversation" where a second
+  // bird answers.
+  const now = ctx.currentTime;
+  const primary =
+    CHIRP_PRESETS[Math.floor(Math.random() * CHIRP_PRESETS.length)];
+  const count = 1 + Math.floor(Math.random() * 4); // 1-4 chirps
+  let t = now + 0.02;
+  for (let i = 0; i < count; i++) {
+    const preset = {
+      ...primary,
+      // Light randomization so repeated chirps don't sound mechanical
+      startFreq: primary.startFreq * (1 + (Math.random() - 0.5) * 0.06),
+      endFreq: primary.endFreq * (1 + (Math.random() - 0.5) * 0.06),
+      duration: primary.duration * (0.85 + Math.random() * 0.3),
+    };
+    playChirp(ctx, dest, t, preset);
+    t += preset.duration + 0.08 + Math.random() * 0.12;
+  }
+
+  // Conversational reply from a different bird
+  if (Math.random() < 0.32) {
+    const reply =
+      CHIRP_PRESETS[Math.floor(Math.random() * CHIRP_PRESETS.length)];
+    const replyTime = t + 0.15 + Math.random() * 0.25;
+    playChirp(ctx, dest, replyTime, {
+      ...reply,
+      level: reply.level * 0.7, // slightly quieter = distant
+    });
+  }
 }
