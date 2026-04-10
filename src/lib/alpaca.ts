@@ -108,6 +108,27 @@ export function getAsset(symbol: string): Promise<AlpacaAsset> {
   );
 }
 
+// Module-level cache for the active US equities list. The full response is
+// ~11K rows (~2MB), and there is no text-search endpoint — we fetch once and
+// filter locally. Cache lives for the lifetime of the serverless instance
+// (typically minutes), which is enough to absorb bursts of typeahead calls
+// without hammering Alpaca.
+let assetsCache: { data: AlpacaAsset[]; expiresAt: number } | null = null;
+const ASSETS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+export async function listActiveUSEquities(): Promise<AlpacaAsset[]> {
+  const now = Date.now();
+  if (assetsCache && assetsCache.expiresAt > now) {
+    return assetsCache.data;
+  }
+  const data = await tradingGet<AlpacaAsset[]>(
+    "/v2/assets?status=active&asset_class=us_equity"
+  );
+  const tradable = data.filter((a) => a.tradable);
+  assetsCache = { data: tradable, expiresAt: now + ASSETS_CACHE_TTL_MS };
+  return tradable;
+}
+
 export function getPositions() {
   return tradingGet<AlpacaPosition[]>("/v2/positions");
 }

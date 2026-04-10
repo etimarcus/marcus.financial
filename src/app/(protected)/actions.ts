@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import { createOrder, getAsset } from "@/lib/alpaca";
+import { createOrder, getAsset, listActiveUSEquities } from "@/lib/alpaca";
 import { validateProposal } from "@/lib/guardrails";
 import {
   runScan,
@@ -166,6 +166,64 @@ export async function addToWatchlist(
 
   revalidatePath("/");
   return { ok: true, message: `${normalized} added to watchlist.` };
+}
+
+export type AssetSearchHit = {
+  symbol: string;
+  name: string;
+  exchange: string;
+};
+
+export async function searchAssets(
+  query: string
+): Promise<{ results: AssetSearchHit[] }> {
+  await requireAuth();
+  const q = query.trim();
+  if (q.length === 0) return { results: [] };
+
+  try {
+    const all = await listActiveUSEquities();
+    const qUpper = q.toUpperCase();
+    const qLower = q.toLowerCase();
+
+    const exactSymbol: typeof all = [];
+    const symbolPrefix: typeof all = [];
+    const nameMatch: typeof all = [];
+
+    for (const asset of all) {
+      if (asset.symbol === qUpper) {
+        exactSymbol.push(asset);
+      } else if (asset.symbol.startsWith(qUpper)) {
+        symbolPrefix.push(asset);
+      } else if (asset.name.toLowerCase().includes(qLower)) {
+        nameMatch.push(asset);
+      }
+      if (
+        exactSymbol.length +
+          symbolPrefix.length +
+          nameMatch.length >=
+        200
+      ) {
+        break;
+      }
+    }
+
+    const combined = [
+      ...exactSymbol,
+      ...symbolPrefix.slice(0, 10),
+      ...nameMatch.slice(0, 10),
+    ].slice(0, 15);
+
+    return {
+      results: combined.map((a) => ({
+        symbol: a.symbol,
+        name: a.name,
+        exchange: a.exchange,
+      })),
+    };
+  } catch {
+    return { results: [] };
+  }
 }
 
 export async function removeFromWatchlist(

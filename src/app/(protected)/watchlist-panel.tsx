@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { addToWatchlist, removeFromWatchlist } from "./actions";
+import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  addToWatchlist,
+  removeFromWatchlist,
+  searchAssets,
+  type AssetSearchHit,
+} from "./actions";
 import type { AlpacaSnapshot, AlpacaNewsArticle } from "@/lib/alpaca";
 
 export type WatchlistEntry = {
@@ -102,24 +107,97 @@ export function WatchlistPanel({
   snapshots: Record<string, AlpacaSnapshot>;
   newsBySymbol: Record<string, AlpacaNewsArticle[]>;
 }) {
-  const [symbol, setSymbol] = useState("");
+  const [query, setQuery] = useState("");
   const [notes, setNotes] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<AssetSearchHit[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const boxRef = useRef<HTMLFormElement>(null);
 
-  function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const q = query.trim();
+    if (q.length === 0) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await searchAssets(q);
+        setSuggestions(res.results);
+        setActiveIndex(-1);
+      } catch {
+        setSuggestions([]);
+      }
+    }, 180);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (!boxRef.current) return;
+      if (!boxRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+
+  function pickSuggestion(hit: AssetSearchHit) {
+    setQuery(hit.symbol);
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setActiveIndex(-1);
+  }
+
+  function submitAdd(symbolToAdd: string) {
     setError(null);
-    if (!symbol.trim()) return;
+    const trimmed = symbolToAdd.trim();
+    if (!trimmed) return;
     startTransition(async () => {
-      const result = await addToWatchlist(symbol, notes || undefined);
+      const result = await addToWatchlist(trimmed, notes || undefined);
       if (!result.ok) {
         setError(result.error);
         return;
       }
-      setSymbol("");
+      setQuery("");
       setNotes("");
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveIndex(-1);
     });
+  }
+
+  function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    // If the user pressed Enter with a highlighted suggestion, add that.
+    if (activeIndex >= 0 && suggestions[activeIndex]) {
+      submitAdd(suggestions[activeIndex].symbol);
+      return;
+    }
+    submitAdd(query);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) =>
+        i <= 0 ? suggestions.length - 1 : i - 1
+      );
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveIndex(-1);
+    }
   }
 
   function handleRemove(id: number) {
@@ -136,17 +214,60 @@ export function WatchlistPanel({
       <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-5 space-y-4">
         <form
           onSubmit={handleAdd}
-          className="flex flex-col sm:flex-row gap-2"
+          className="flex flex-col sm:flex-row gap-2 relative"
+          ref={boxRef}
         >
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="SYMBOL"
-            className="rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm font-mono w-28 text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 transition-colors"
-            maxLength={10}
-            disabled={isPending}
-          />
+          <div className="relative sm:w-64">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowSuggestions(true);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Symbol or company name"
+              className="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 transition-colors"
+              maxLength={60}
+              disabled={isPending}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul className="absolute z-30 left-0 right-0 top-full mt-1 rounded-lg border border-white/[0.1] bg-[#0c0f14]/98 backdrop-blur shadow-xl max-h-80 overflow-y-auto">
+                {suggestions.map((hit, i) => (
+                  <li key={`${hit.symbol}-${i}`}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        pickSuggestion(hit);
+                      }}
+                      onMouseEnter={() => setActiveIndex(i)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
+                        activeIndex === i
+                          ? "bg-accent/10"
+                          : "hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      <span className="font-mono font-semibold text-zinc-100 w-16 tabular-nums">
+                        {hit.symbol}
+                      </span>
+                      <span className="text-xs text-zinc-400 flex-1 truncate">
+                        {hit.name}
+                      </span>
+                      <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-wider">
+                        {hit.exchange}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <input
             type="text"
             value={notes}
@@ -157,7 +278,7 @@ export function WatchlistPanel({
           />
           <button
             type="submit"
-            disabled={isPending || !symbol.trim()}
+            disabled={isPending || !query.trim()}
             className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-4 py-2 text-sm font-medium disabled:opacity-30 transition-colors"
           >
             Add
