@@ -106,3 +106,27 @@ export function getBars(
   });
   return dataGet(`/v2/stocks/${encodeURIComponent(symbol)}/bars?${params}`);
 }
+
+export type AlpacaNewsArticle = {
+  id: number;
+  headline: string;
+  summary: string;
+  author: string;
+  created_at: string;
+  updated_at: string;
+  url: string;
+  symbols: string[];
+  source: string;
+};
+
+export function getNews(
+  symbols: string[],
+  limit = 20
+): Promise<{ news: AlpacaNewsArticle[] }> {
+  const params = new URLSearchParams({
+    symbols: symbols.join(","),
+    limit: String(limit),
+    sort: "desc",
+  });
+  return dataGet(`/v1beta1/news?${params}`);
+}
