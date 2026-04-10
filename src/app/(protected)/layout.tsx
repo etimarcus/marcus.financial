@@ -51,6 +51,14 @@ export default async function ProtectedLayout({
           </div>
           <div className="flex items-center gap-4">
             <ChatDrawer />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon.png"
+              alt="marcus.financial shield"
+              width={48}
+              height={48}
+              className="h-12 w-12 drop-shadow-[0_0_12px_rgba(242,214,106,0.25)]"
+            />
             <form action={logout}>
               <button
                 type="submit"
