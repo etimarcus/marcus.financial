@@ -48,6 +48,18 @@ CREATE TABLE IF NOT EXISTS trades (
   filled_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS cron_config (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  interval_minutes INTEGER NOT NULL DEFAULT 15 CHECK (interval_minutes >= 5),
+  last_run_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO cron_config (id, enabled, interval_minutes)
+VALUES (1, TRUE, 15)
+ON CONFLICT (id) DO NOTHING;
+
 CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);
 CREATE INDEX IF NOT EXISTS idx_proposals_created_at ON proposals(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_trades_symbol ON trades(symbol);

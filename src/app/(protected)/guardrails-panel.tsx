@@ -28,14 +28,14 @@ export async function GuardrailsPanel({
 
   return (
     <section>
-      <h2 className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 mb-2">
+      <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-2">
         Risk guardrails
       </h2>
       <div
-        className={`rounded-xl border p-4 grid grid-cols-2 md:grid-cols-4 gap-4 ${
+        className={`rounded-2xl border backdrop-blur p-5 grid grid-cols-2 md:grid-cols-4 gap-6 ${
           anyBlocked
-            ? "border-red-500/40 bg-red-50 dark:bg-red-950/20"
-            : "border-black/10 dark:border-white/10 bg-white dark:bg-zinc-950"
+            ? "border-red-500/30 bg-gradient-to-b from-red-950/20 to-zinc-950/70"
+            : "border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70"
         }`}
       >
         <Metric
@@ -52,7 +52,7 @@ export async function GuardrailsPanel({
         <Metric
           label="Day return"
           value={`${dayReturnPct >= 0 ? "+" : ""}${dayReturnPct.toFixed(2)}%`}
-          sub={`circuit at -${config.maxDayDrawdownPct}%`}
+          sub={`circuit at −${config.maxDayDrawdownPct}%`}
           tone={
             drawdownTripped ? "neg" : dayReturnPct >= 0 ? "pos" : undefined
           }
@@ -66,10 +66,8 @@ export async function GuardrailsPanel({
         />
       </div>
       {anyBlocked && (
-        <div className="mt-2 text-xs text-red-600 dark:text-red-400">
-          New trades are currently blocked by guardrails. Proposals can still
-          be created, but approval will fail until the limit resets (midnight
-          ET for daily cap) or equity recovers.
+        <div className="mt-2 text-[11px] font-mono text-red-400 uppercase tracking-wider">
+          ⚠ new trades blocked — limit resets at midnight ET or on equity recovery
         </div>
       )}
     </section>
@@ -89,17 +87,23 @@ function Metric({
 }) {
   const toneClass =
     tone === "pos"
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-emerald-400"
       : tone === "neg"
-        ? "text-red-600 dark:text-red-400"
-        : "text-black dark:text-zinc-50";
+        ? "text-red-400"
+        : "text-zinc-100";
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-zinc-500">
+      <div className="text-[10px] uppercase tracking-[0.15em] text-zinc-600 font-mono">
         {label}
       </div>
-      <div className={`mt-1 text-lg font-semibold ${toneClass}`}>{value}</div>
-      {sub && <div className="text-xs text-zinc-500">{sub}</div>}
+      <div className={`mt-1.5 text-xl font-semibold tabular-nums ${toneClass}`}>
+        {value}
+      </div>
+      {sub && (
+        <div className="text-[10px] text-zinc-600 font-mono uppercase tracking-wider mt-0.5">
+          {sub}
+        </div>
+      )}
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   type WatchlistEntry,
 } from "./watchlist-panel";
 import { GuardrailsPanel } from "./guardrails-panel";
+import { CronPanel, type CronPanelProps } from "./cron-panel";
 
 function fmtUsd(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -48,36 +49,84 @@ async function getWatchlist(): Promise<WatchlistEntry[]> {
   return rows as WatchlistEntry[];
 }
 
+async function getCronPanelData(): Promise<CronPanelProps> {
+  await db.query(
+    `INSERT INTO cron_config (id, enabled, interval_minutes)
+     VALUES (1, TRUE, 15)
+     ON CONFLICT (id) DO NOTHING`
+  );
+  const { rows: cfgRows } = await db.query<{
+    enabled: boolean;
+    interval_minutes: number;
+    last_run_at: string | null;
+  }>(
+    "SELECT enabled, interval_minutes, last_run_at FROM cron_config WHERE id = 1"
+  );
+  const cfg = cfgRows[0];
+
+  const { rows: runs } = await db.query(
+    `SELECT id, started_at, finished_at, cost_usd, summary, error
+       FROM agent_runs
+      WHERE trigger = 'cron'
+      ORDER BY started_at DESC
+      LIMIT 10`
+  );
+
+  return {
+    enabled: cfg.enabled,
+    intervalMinutes: cfg.interval_minutes,
+    lastRunAt: cfg.last_run_at,
+    recentRuns: runs.map((r) => ({
+      id: r.id,
+      started_at: r.started_at.toISOString
+        ? r.started_at.toISOString()
+        : r.started_at,
+      finished_at: r.finished_at
+        ? r.finished_at.toISOString
+          ? r.finished_at.toISOString()
+          : r.finished_at
+        : null,
+      cost_usd: r.cost_usd != null ? String(r.cost_usd) : null,
+      summary: r.summary,
+      error: r.error,
+    })),
+  };
+}
+
 export default async function Dashboard() {
   let account;
   let positions: AlpacaPosition[] = [];
   let clock;
   let proposals: PendingProposal[] = [];
   let watchlist: WatchlistEntry[] = [];
+  let cronData: CronPanelProps | null = null;
   let error: string | null = null;
 
   try {
-    [account, positions, clock, proposals, watchlist] = await Promise.all([
-      getAccount(),
-      getPositions(),
-      getClock(),
-      getPendingProposals(),
-      getWatchlist(),
-    ]);
+    [account, positions, clock, proposals, watchlist, cronData] =
+      await Promise.all([
+        getAccount(),
+        getPositions(),
+        getClock(),
+        getPendingProposals(),
+        getWatchlist(),
+        getCronPanelData(),
+      ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
   }
 
-  if (error || !account || !clock) {
+  if (error || !account || !clock || !cronData) {
     return (
-      <main className="p-6 max-w-5xl mx-auto">
-        <div className="rounded-xl border border-red-500/30 bg-red-50 dark:bg-red-950/30 p-4 text-sm text-red-800 dark:text-red-300">
-          <div className="font-semibold">Could not load Alpaca data.</div>
-          <div className="mt-1 font-mono text-xs break-all">{error}</div>
-          <div className="mt-2">
-            Check that <code>ALPACA_API_KEY</code>,{" "}
-            <code>ALPACA_API_SECRET</code>, and <code>ALPACA_BASE_URL</code> are
-            set correctly.
+      <main className="p-6 max-w-6xl mx-auto">
+        <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-5 text-sm text-red-300">
+          <div className="font-semibold">Could not load dashboard data.</div>
+          <div className="mt-1 font-mono text-xs break-all text-red-400/80">
+            {error}
+          </div>
+          <div className="mt-2 text-red-300/80">
+            Check that env vars are set correctly and the database schema is
+            migrated (<code className="font-mono">npm run db:migrate</code>).
           </div>
         </div>
       </main>
@@ -90,26 +139,39 @@ export default async function Dashboard() {
   const dayPnlPct = lastEquity > 0 ? dayPnl / lastEquity : 0;
 
   return (
-    <main className="p-6 max-w-5xl mx-auto space-y-6">
-      <section className="flex items-baseline justify-between">
+    <main className="p-6 max-w-6xl mx-auto space-y-8">
+      <section className="flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
+          <h1 className="text-3xl font-semibold tracking-tight text-zinc-100">
             Dashboard
           </h1>
-          <p className="text-sm text-zinc-500">
-            Alpaca {account.status.toLowerCase()} ·{" "}
-            {clock.is_open ? "Market open" : "Market closed"}
-          </p>
+          <div className="flex items-center gap-3 mt-1 text-xs font-mono uppercase tracking-wider text-zinc-500">
+            <span className="flex items-center gap-1.5">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  clock.is_open
+                    ? "bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"
+                    : "bg-zinc-600"
+                }`}
+              />
+              {clock.is_open ? "market open" : "market closed"}
+            </span>
+            <span className="text-zinc-700">·</span>
+            <span>{account.status.toLowerCase()}</span>
+            <span className="text-zinc-700">·</span>
+            <span>paper</span>
+          </div>
         </div>
       </section>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Stat label="Equity" value={fmtUsd(account.equity)} />
+        <Stat label="Equity" value={fmtUsd(account.equity)} big />
         <Stat
           label="Day P&L"
           value={fmtUsd(dayPnl)}
           sub={fmtPct(dayPnlPct)}
           tone={dayPnl >= 0 ? "pos" : "neg"}
+          big
         />
         <Stat label="Cash" value={fmtUsd(account.cash)} />
         <Stat label="Buying power" value={fmtUsd(account.buying_power)} />
@@ -119,27 +181,25 @@ export default async function Dashboard() {
 
       <ProposalsPanel proposals={proposals} />
 
-      <WatchlistPanel entries={watchlist} />
-
       <section>
-        <h2 className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 mb-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-2">
           Positions ({positions.length})
         </h2>
         {positions.length === 0 ? (
-          <div className="rounded-xl border border-black/10 dark:border-white/10 p-6 text-sm text-zinc-500">
+          <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-8 text-sm text-zinc-500 text-center">
             No open positions.
           </div>
         ) : (
-          <div className="rounded-xl border border-black/10 dark:border-white/10 overflow-hidden">
+          <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-zinc-50 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400">
+              <thead className="text-zinc-500 border-b border-white/[0.06]">
                 <tr>
                   <Th>Symbol</Th>
-                  <Th>Qty</Th>
-                  <Th>Avg entry</Th>
-                  <Th>Current</Th>
-                  <Th>Market value</Th>
-                  <Th>Unrealized P&L</Th>
+                  <Th className="text-right">Qty</Th>
+                  <Th className="text-right">Avg entry</Th>
+                  <Th className="text-right">Current</Th>
+                  <Th className="text-right">Market value</Th>
+                  <Th className="text-right">Unrealized P&L</Th>
                 </tr>
               </thead>
               <tbody>
@@ -147,21 +207,34 @@ export default async function Dashboard() {
                   const plNum = Number(p.unrealized_pl);
                   const plPct = Number(p.unrealized_plpc);
                   const tone =
-                    plNum >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-red-600 dark:text-red-400";
+                    plNum >= 0 ? "text-emerald-400" : "text-red-400";
                   return (
                     <tr
                       key={p.symbol}
-                      className="border-t border-black/5 dark:border-white/5"
+                      className="border-t border-white/[0.04] hover:bg-white/[0.02] transition-colors"
                     >
-                      <Td className="font-medium">{p.symbol}</Td>
-                      <Td>{p.qty}</Td>
-                      <Td>{fmtUsd(p.avg_entry_price)}</Td>
-                      <Td>{fmtUsd(p.current_price)}</Td>
-                      <Td>{fmtUsd(p.market_value)}</Td>
-                      <Td className={tone}>
-                        {fmtUsd(plNum)} ({fmtPct(plPct)})
+                      <Td className="font-mono font-semibold text-zinc-100">
+                        {p.symbol}
+                      </Td>
+                      <Td className="text-right tabular-nums text-zinc-300">
+                        {p.qty}
+                      </Td>
+                      <Td className="text-right tabular-nums text-zinc-300">
+                        {fmtUsd(p.avg_entry_price)}
+                      </Td>
+                      <Td className="text-right tabular-nums text-zinc-300">
+                        {fmtUsd(p.current_price)}
+                      </Td>
+                      <Td className="text-right tabular-nums text-zinc-300">
+                        {fmtUsd(p.market_value)}
+                      </Td>
+                      <Td
+                        className={`text-right tabular-nums font-semibold ${tone}`}
+                      >
+                        {fmtUsd(plNum)}{" "}
+                        <span className="text-xs opacity-70">
+                          ({fmtPct(plPct)})
+                        </span>
                       </Td>
                     </tr>
                   );
@@ -171,6 +244,10 @@ export default async function Dashboard() {
           </div>
         )}
       </section>
+
+      <CronPanel {...cronData} />
+
+      <WatchlistPanel entries={watchlist} />
     </main>
   );
 }
@@ -180,32 +257,52 @@ function Stat({
   value,
   sub,
   tone,
+  big,
 }: {
   label: string;
   value: string;
   sub?: string;
   tone?: "pos" | "neg";
+  big?: boolean;
 }) {
   const toneClass =
     tone === "pos"
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-emerald-400"
       : tone === "neg"
-        ? "text-red-600 dark:text-red-400"
-        : "text-black dark:text-zinc-50";
+        ? "text-red-400"
+        : "text-zinc-100";
   return (
-    <div className="rounded-xl border border-black/10 dark:border-white/10 p-4">
-      <div className="text-xs uppercase tracking-wide text-zinc-500">
+    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-5">
+      <div className="text-[10px] font-mono uppercase tracking-[0.15em] text-zinc-600">
         {label}
       </div>
-      <div className={`mt-1 text-xl font-semibold ${toneClass}`}>{value}</div>
-      {sub && <div className={`text-xs ${toneClass}`}>{sub}</div>}
+      <div
+        className={`mt-1.5 font-semibold tabular-nums ${toneClass} ${
+          big ? "text-2xl" : "text-xl"
+        }`}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div className={`text-xs font-mono tabular-nums ${toneClass} opacity-70 mt-0.5`}>
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <th className="text-left font-medium px-3 py-2 text-xs uppercase tracking-wide">
+    <th
+      className={`font-mono font-medium px-4 py-3 text-[10px] uppercase tracking-[0.15em] ${className || "text-left"}`}
+    >
       {children}
     </th>
   );
@@ -218,5 +315,5 @@ function Td({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <td className={`px-3 py-2 ${className}`}>{children}</td>;
+  return <td className={`px-4 py-3 ${className}`}>{children}</td>;
 }

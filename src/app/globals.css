@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #07090d;
+  --foreground: #ededed;
+  --panel: #0c0f14;
+  --panel-border: rgba(255, 255, 255, 0.06);
+  --accent: #22d3ee;
+  --accent-dim: rgba(34, 211, 238, 0.15);
 }
 
 @theme inline {
@@ -12,15 +16,84 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image:
+    radial-gradient(
+      ellipse 1000px 600px at 50% -200px,
+      rgba(34, 211, 238, 0.06),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse 800px 500px at 100% 100%,
+      rgba(34, 211, 238, 0.03),
+      transparent 60%
+    );
+  background-attachment: fixed;
+}
+
+/* Subtle grid pattern overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Ensure content sits above the pattern */
+#__next,
+main,
+header,
+body > div {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tabular numbers wherever we show financial figures */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus ring override — more subtle */
+*:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+  background-clip: padding-box;
 }

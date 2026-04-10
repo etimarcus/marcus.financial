@@ -42,6 +42,13 @@ type AgentEvent =
 
 const STORAGE_KEY = "marcus_chat_history_v1";
 
+const STARTERS = [
+  "Dame una vista general del mercado hoy",
+  "Análisis técnico de NVDA en timeframe diario",
+  "¿Qué noticias relevantes hay sobre mi portafolio?",
+  "Busca oportunidades en la watchlist",
+];
+
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -72,10 +79,8 @@ export default function ChatPage() {
     });
   }, [messages, pending]);
 
-  async function send() {
-    const text = input.trim();
-    if (!text || pending) return;
-    setInput("");
+  async function sendWith(text: string) {
+    if (!text.trim() || pending) return;
 
     const userMsg: ChatMessage = {
       id: uid(),
@@ -95,10 +100,7 @@ export default function ChatPage() {
 
     const apiMessages = newMessages
       .filter((m) => m.id !== assistantMsg.id)
-      .map((m) => ({
-        role: m.role,
-        content: m.text,
-      }));
+      .map((m) => ({ role: m.role, content: m.text }));
 
     try {
       const res = await fetch("/api/chat", {
@@ -151,6 +153,13 @@ export default function ChatPage() {
     }
   }
 
+  function send() {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    sendWith(text);
+  }
+
   function applyEvent(assistantId: string, event: AgentEvent) {
     setMessages((prev) =>
       prev.map((m) => {
@@ -163,11 +172,7 @@ export default function ChatPage() {
             ...m,
             toolCalls: [
               ...m.toolCalls,
-              {
-                id: event.id,
-                name: event.name,
-                input: event.input,
-              },
+              { id: event.id, name: event.name, input: event.input },
             ],
           };
         }
@@ -198,43 +203,53 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="flex-1 flex flex-col h-[calc(100vh-57px)]">
-      <div className="border-b border-black/10 dark:border-white/10 px-6 py-3 flex items-center justify-between">
+    <main className="flex-1 flex flex-col h-[calc(100vh-73px)]">
+      <div className="border-b border-white/[0.06] px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-black dark:text-zinc-50">
-            Analyst chat
-          </h1>
-          <p className="text-xs text-zinc-500">
-            Read-only market analysis — no trades executed.
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+            <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
+              Analyst chat
+            </h1>
+          </div>
+          <p className="text-[11px] text-zinc-500 mt-0.5 font-mono uppercase tracking-wider">
+            claude opus 4.6 · read + propose
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <a
-            href="/"
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50"
-          >
-            Dashboard
-          </a>
-          <button
-            onClick={clear}
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-zinc-50"
-          >
-            Clear
-          </button>
-        </div>
+        <button
+          onClick={clear}
+          className="text-xs text-zinc-500 hover:text-zinc-200 transition-colors"
+        >
+          Clear history
+        </button>
       </div>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-8">
         <div className="max-w-3xl mx-auto space-y-6">
           {messages.length === 0 && (
-            <div className="text-sm text-zinc-500 text-center py-16">
-              Ask about your portfolio, a ticker, the market, news, or
-              indicators. Try:
-              <ul className="mt-4 space-y-1 font-mono text-xs">
-                <li>&quot;¿Cómo está el mercado hoy?&quot;</li>
-                <li>&quot;Dame un análisis técnico de NVDA en 1Day&quot;</li>
-                <li>&quot;¿Qué noticias hay de TSLA?&quot;</li>
-              </ul>
+            <div className="py-12">
+              <div className="text-center mb-8">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 text-black font-bold mb-4 shadow-[0_0_32px_rgba(34,211,238,0.3)]">
+                  m
+                </div>
+                <h2 className="text-lg font-semibold text-zinc-100 mb-1">
+                  Ready to analyze.
+                </h2>
+                <p className="text-sm text-zinc-500">
+                  Ask anything about markets, your portfolio, or a ticker.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl mx-auto">
+                {STARTERS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendWith(s)}
+                    className="text-left text-sm text-zinc-300 px-4 py-3 rounded-xl border border-white/[0.06] hover:border-cyan-400/30 hover:bg-cyan-500/[0.03] transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -243,14 +258,15 @@ export default function ChatPage() {
           ))}
 
           {pending && messages[messages.length - 1]?.text === "" && (
-            <div className="text-xs text-zinc-500 italic pl-1">
-              Thinking…
+            <div className="flex items-center gap-2 text-xs text-zinc-500 pl-11 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              thinking…
             </div>
           )}
         </div>
       </div>
 
-      <div className="border-t border-black/10 dark:border-white/10 px-6 py-4">
+      <div className="border-t border-white/[0.06] bg-[#07090d]/80 backdrop-blur px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-end gap-2">
           <textarea
             value={input}
@@ -264,12 +280,12 @@ export default function ChatPage() {
             placeholder={pending ? "Waiting for response…" : "Ask the agent…"}
             disabled={pending}
             rows={2}
-            className="flex-1 resize-none rounded-lg border border-black/10 dark:border-white/15 bg-transparent px-3 py-2 text-sm text-black dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-black/40 dark:focus:ring-white/30 disabled:opacity-50"
+            className="flex-1 resize-none rounded-xl border border-white/[0.08] bg-zinc-950/60 px-4 py-3 text-sm text-zinc-100 focus:outline-none focus:border-cyan-400/40 focus:ring-1 focus:ring-cyan-400/30 disabled:opacity-50 transition-colors"
           />
           <button
             onClick={send}
             disabled={pending || !input.trim()}
-            className="rounded-lg bg-black dark:bg-white text-white dark:text-black px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-30"
+            className="rounded-xl bg-cyan-500 text-black px-4 py-3 text-sm font-semibold hover:bg-cyan-400 disabled:opacity-30 transition-colors"
           >
             Send
           </button>
@@ -281,24 +297,34 @@ export default function ChatPage() {
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
+
+  if (isUser) {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-cyan-500/10 border border-cyan-400/20 px-4 py-3">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-100">
+            {message.text}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-          isUser
-            ? "bg-black dark:bg-white text-white dark:text-black"
-            : "bg-zinc-100 dark:bg-zinc-900 text-black dark:text-zinc-50"
-        }`}
-      >
+    <div className="flex justify-start gap-3">
+      <div className="flex-shrink-0 h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-black font-bold text-sm shadow-[0_0_16px_rgba(34,211,238,0.3)]">
+        m
+      </div>
+      <div className="flex-1 min-w-0 space-y-2 pt-0.5">
         {message.toolCalls.length > 0 && (
-          <div className="mb-2 space-y-1">
+          <div className="space-y-1">
             {message.toolCalls.map((tc) => (
               <ToolChip key={tc.id} toolCall={tc} />
             ))}
           </div>
         )}
         {message.text && (
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+          <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
             {message.text}
           </div>
         )}
@@ -314,27 +340,27 @@ function ToolChip({ toolCall }: { toolCall: ToolCall }) {
       ? "error"
       : "done"
     : "running";
-  const statusColor = {
-    running: "text-amber-600 dark:text-amber-400",
-    done: "text-emerald-600 dark:text-emerald-400",
-    error: "text-red-600 dark:text-red-400",
+  const dotColor = {
+    running: "bg-amber-400 animate-pulse",
+    done: "bg-cyan-400",
+    error: "bg-red-400",
   }[status];
 
   return (
-    <div className="rounded-lg border border-black/10 dark:border-white/15 bg-white/50 dark:bg-black/30 px-2 py-1 text-xs">
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] text-xs overflow-hidden">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full text-left"
+        className="flex items-center gap-2 w-full text-left px-3 py-1.5 hover:bg-white/[0.03] transition-colors"
       >
-        <span className={statusColor}>●</span>
-        <span className="font-mono">{toolCall.name}</span>
-        <span className="text-zinc-500 truncate flex-1">
+        <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${dotColor}`} />
+        <span className="font-mono text-cyan-300">{toolCall.name}</span>
+        <span className="text-zinc-500 truncate flex-1 font-mono text-[10px]">
           {JSON.stringify(toolCall.input)}
         </span>
-        <span className="text-zinc-400">{open ? "▾" : "▸"}</span>
+        <span className="text-zinc-600">{open ? "▾" : "▸"}</span>
       </button>
       {open && toolCall.result && (
-        <pre className="mt-2 text-[10px] leading-tight overflow-x-auto max-h-48 text-zinc-700 dark:text-zinc-300">
+        <pre className="px-3 pb-2 pt-1 text-[10px] leading-tight overflow-x-auto max-h-48 text-zinc-400 font-mono border-t border-white/[0.04]">
           {toolCall.result.slice(0, 4000)}
           {toolCall.result.length > 4000 && "…"}
         </pre>

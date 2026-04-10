@@ -5,6 +5,7 @@ import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { createOrder } from "@/lib/alpaca";
 import { validateProposal } from "@/lib/guardrails";
+import { runScheduledScan, type ScanResult } from "@/lib/scheduled-scan";
 
 async function requireAuth() {
   const session = await getSession();
@@ -167,4 +168,70 @@ export async function removeFromWatchlist(
 
   revalidatePath("/");
   return { ok: true, message: `Removed ${res.rows[0].symbol}.` };
+}
+
+const ALLOWED_INTERVALS = [5, 10, 15, 30, 60, 120] as const;
+
+export async function setCronEnabled(
+  enabled: boolean
+): Promise<ActionResult> {
+  await requireAuth();
+  await db.query(
+    `INSERT INTO cron_config (id, enabled, interval_minutes, updated_at)
+     VALUES (1, $1, 15, NOW())
+     ON CONFLICT (id) DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = NOW()`,
+    [enabled]
+  );
+  revalidatePath("/");
+  return {
+    ok: true,
+    message: enabled ? "Scheduled scans enabled." : "Scheduled scans paused.",
+  };
+}
+
+export async function setCronInterval(
+  minutes: number
+): Promise<ActionResult> {
+  await requireAuth();
+  if (!ALLOWED_INTERVALS.includes(minutes as (typeof ALLOWED_INTERVALS)[number])) {
+    return {
+      ok: false,
+      error: `Interval must be one of ${ALLOWED_INTERVALS.join(", ")}`,
+    };
+  }
+  await db.query(
+    `INSERT INTO cron_config (id, enabled, interval_minutes, updated_at)
+     VALUES (1, TRUE, $1, NOW())
+     ON CONFLICT (id) DO UPDATE SET interval_minutes = EXCLUDED.interval_minutes, updated_at = NOW()`,
+    [minutes]
+  );
+  revalidatePath("/");
+  return { ok: true, message: `Interval set to ${minutes} minutes.` };
+}
+
+export async function runCronNow(): Promise<
+  ActionResult & { result?: ScanResult }
+> {
+  await requireAuth();
+  try {
+    const result = await runScheduledScan({ force: true });
+    revalidatePath("/");
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error ?? "Scan failed",
+        result,
+      };
+    }
+    return {
+      ok: true,
+      message: result.skipped
+        ? `Skipped: ${result.skipped}`
+        : `Scan complete — ${result.symbols_scanned} scanned, ${result.proposals_created} proposals.`,
+      result,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message };
+  }
 }
