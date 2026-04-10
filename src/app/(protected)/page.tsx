@@ -9,6 +9,10 @@ import {
   ProposalsPanel,
   type PendingProposal,
 } from "./proposals-panel";
+import {
+  WatchlistPanel,
+  type WatchlistEntry,
+} from "./watchlist-panel";
 
 function fmtUsd(value: string | number) {
   const n = typeof value === "string" ? Number(value) : value;
@@ -36,19 +40,28 @@ async function getPendingProposals(): Promise<PendingProposal[]> {
   return rows as PendingProposal[];
 }
 
+async function getWatchlist(): Promise<WatchlistEntry[]> {
+  const { rows } = await db.query(
+    "SELECT id, symbol, notes, created_at FROM watchlist ORDER BY symbol"
+  );
+  return rows as WatchlistEntry[];
+}
+
 export default async function Dashboard() {
   let account;
   let positions: AlpacaPosition[] = [];
   let clock;
   let proposals: PendingProposal[] = [];
+  let watchlist: WatchlistEntry[] = [];
   let error: string | null = null;
 
   try {
-    [account, positions, clock, proposals] = await Promise.all([
+    [account, positions, clock, proposals, watchlist] = await Promise.all([
       getAccount(),
       getPositions(),
       getClock(),
       getPendingProposals(),
+      getWatchlist(),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -102,6 +115,8 @@ export default async function Dashboard() {
       </section>
 
       <ProposalsPanel proposals={proposals} />
+
+      <WatchlistPanel entries={watchlist} />
 
       <section>
         <h2 className="text-sm font-semibold tracking-tight text-zinc-700 dark:text-zinc-300 mb-2">

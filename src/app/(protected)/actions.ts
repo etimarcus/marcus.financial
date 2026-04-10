@@ -105,3 +105,46 @@ export async function rejectProposal(
   revalidatePath("/");
   return { ok: true, message: "Proposal rejected." };
 }
+
+export async function addToWatchlist(
+  symbol: string,
+  notes?: string
+): Promise<ActionResult> {
+  await requireAuth();
+
+  const normalized = symbol.trim().toUpperCase();
+  if (!/^[A-Z.\-]{1,10}$/.test(normalized)) {
+    return { ok: false, error: "Invalid symbol format" };
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO watchlist (symbol, notes) VALUES ($1, $2)
+       ON CONFLICT (symbol) DO UPDATE SET notes = EXCLUDED.notes`,
+      [normalized, notes ?? null]
+    );
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message };
+  }
+
+  revalidatePath("/");
+  return { ok: true, message: `${normalized} added to watchlist.` };
+}
+
+export async function removeFromWatchlist(
+  id: number
+): Promise<ActionResult> {
+  await requireAuth();
+
+  const res = await db.query(
+    "DELETE FROM watchlist WHERE id = $1 RETURNING symbol",
+    [id]
+  );
+  if (res.rowCount === 0) {
+    return { ok: false, error: "Watchlist entry not found" };
+  }
+
+  revalidatePath("/");
+  return { ok: true, message: `Removed ${res.rows[0].symbol}.` };
+}
