@@ -66,20 +66,24 @@ Start now.`,
   tradingview: {
     key: "tradingview",
     scheduled: true,
-    requiresMarketOpen: true,
+    requiresMarketOpen: false,
     bypassWhitelist: true,
     buildKickoff: ({ now }) => `[TradingView scan · ${now}]
 
-You're scanning TradingView for equity setups OUTSIDE the watchlist. Use web_search to find candidates, then validate them with your Alpaca tools before proposing.
+You're scanning TradingView for equity setups, ideas, and expert analysis. This scanner runs 24/7 regardless of US market hours because TradingView publishes research around the clock. Use web_search to find candidates, then validate them with your Alpaca tools.
 
 Process:
-1. Call get_positions and get_proposals in parallel. Build a skip-set of symbols already in play.
-2. Use web_search with queries like "tradingview top oversold US equities today RSI below 30", "tradingview bullish breakout patterns this week", or "tradingview best technical setups high volume" to discover candidates.
-3. For 3-5 of the most interesting candidates NOT in the skip-set, verify with calculate_indicators (1Day, 250 lookback) + get_news (5 articles). Trust Alpaca's data over TradingView's.
-4. For any candidate with an honest confidence >= 0.7, call propose_trade with type='limit' and bracket stops (stop_loss + take_profit). Size each trade at no more than 2% of equity.
-5. IMPORTANT: the whitelist guardrail is RELAXED for this scanner — you are permitted to propose trades on symbols outside the watchlist. Other guardrails (position size, daily cap, drawdown) still apply and will block bad proposals automatically.
-6. Be ruthless on quality. A bad proposal is worse than no proposal.
-7. Finish with a one-paragraph summary: what you searched, what you found, what you skipped, what you proposed.
+1. Call get_clock first so you know whether the US market is currently open. This decides how you structure any proposals:
+   - Market open → you may propose market or limit orders, execution happens immediately on approval.
+   - Market closed (pre-market, post-market, weekend) → only propose LIMIT orders. Market orders queued outside RTH get unexpected fills. This is not a reason to skip the scan — proposals saved during closed hours still show up in the dashboard for the user to approve when they wake up.
+2. Call get_positions and get_proposals in parallel. Build a skip-set of symbols already in play.
+3. Use web_search with queries like "tradingview top trade ideas today", "tradingview oversold US equities RSI below 30", "tradingview bullish breakout patterns this week", or "tradingview expert analysis <ticker>" to discover candidates and read published analysis.
+4. For 3-5 of the most interesting candidates NOT in the skip-set, verify with calculate_indicators (1Day, 250 lookback) + get_news (5 articles). Trust Alpaca's data over TradingView's for current price/indicators; trust TradingView for setup narratives and expert commentary.
+5. For any candidate with an honest confidence >= 0.7, call propose_trade with type='limit' and bracket stops (stop_loss + take_profit). Size each trade at no more than 2% of equity.
+6. IMPORTANT: the whitelist guardrail is RELAXED for this scanner — you are permitted to propose trades on symbols outside the watchlist. Other guardrails (position size, daily cap, drawdown) still apply and will block bad proposals automatically.
+7. If the setup is interesting but not actionable as a trade (e.g. longer-term thesis, sector rotation, macro call), use save_insight with source='tradingview', kind='market_insight' instead of propose_trade. Don't waste an interesting read just because it doesn't fit a same-day trade.
+8. Be ruthless on quality. A bad proposal is worse than no proposal.
+9. MANDATORY: finish with a one-paragraph text summary in your final assistant turn. What you searched, what you found, what you skipped, and what (if anything) you proposed or saved. Never end the turn silently — a silent turn shows as "(no summary)" in the dashboard.
 
 Start now.`,
   },
