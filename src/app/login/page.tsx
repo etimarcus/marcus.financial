@@ -13,8 +13,11 @@ export default function LoginPage() {
     <main className="relative flex-1 flex items-center justify-center px-6 overflow-hidden">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[url('/fractal%20original.jpg')] bg-cover bg-center"
+        className="pointer-events-none absolute inset-0"
         style={{
+          backgroundImage: "url('/fractal.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
           maskImage:
             "radial-gradient(circle at center, black 0%, black 20%, transparent 65%)",
           WebkitMaskImage:
