@@ -244,7 +244,7 @@ export default async function Dashboard() {
 
   if (error || !account || !clock || !scannersData) {
     return (
-      <main className="p-6 max-w-6xl mx-auto">
+      <main className="p-6">
         <div className="rounded-2xl border border-red-500/30 bg-red-950/20 p-5 text-sm text-red-300">
           <div className="font-semibold">Could not load dashboard data.</div>
           <div className="mt-1 font-mono text-xs break-all text-red-400/80">
@@ -265,7 +265,7 @@ export default async function Dashboard() {
   const dayPnlPct = lastEquity > 0 ? dayPnl / lastEquity : 0;
 
   return (
-    <main className="px-6 pb-10 max-w-6xl mx-auto space-y-8">
+    <main className="px-6 pb-10 space-y-6">
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Equity" value={fmtUsd(account.equity)} big />
         <Stat

@@ -126,79 +126,75 @@ export function ScannersPanel({ scanners, recentRuns }: ScannersPanelProps) {
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-2">
         Scanners
       </h2>
-      <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-5 space-y-5">
-        {scanners.map((s) => (
-          <ScannerRowView
-            key={s.key}
-            scanner={s}
-            disabled={isPending}
-            onToggle={() => handleToggle(s.key, s.enabled)}
-            onInterval={(m) => handleInterval(s.key, m)}
-            onRun={() => handleRun(s.key)}
-          />
-        ))}
-
-        <div className="pt-5 border-t border-white/[0.06]">
-          <div className="flex items-start justify-between gap-4 mb-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
-                <span className="text-sm font-medium text-zinc-100">
-                  Finviz research
-                </span>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
-                  on-demand
-                </span>
-              </div>
-              <div className="text-xs text-zinc-500 mt-0.5">
-                One-shot research via Finviz-style web screening. Saves a
-                markdown report to Insights.
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={researchQuery}
-              onChange={(e) => setResearchQuery(e.target.value)}
-              placeholder="Query (optional) — e.g. small caps RSI < 30 unusual volume"
+      <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-4 space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-6 gap-y-3">
+          {scanners.map((s) => (
+            <ScannerRowView
+              key={s.key}
+              scanner={s}
               disabled={isPending}
-              className="flex-1 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 disabled:opacity-50 transition-colors"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleResearch();
-              }}
+              onToggle={() => handleToggle(s.key, s.enabled)}
+              onInterval={(m) => handleInterval(s.key, m)}
+              onRun={() => handleRun(s.key)}
             />
-            <button
-              onClick={handleResearch}
-              disabled={isPending}
-              className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
-            >
-              {isPending ? "…" : "Run research"}
-            </button>
-          </div>
+          ))}
         </div>
 
-        <div className="pt-5 border-t border-white/[0.06]">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
-                <span className="text-sm font-medium text-zinc-100">
-                  Glassnode snapshot
-                </span>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
-                  on-demand
-                </span>
-              </div>
-              <div className="text-xs text-zinc-500 mt-0.5">
-                On-chain crypto read (BTC/ETH MVRV, SOPR, flows, holder
-                behavior). Saves a markdown report to Insights.
-              </div>
+        <div className="pt-4 border-t border-white/[0.06] grid grid-cols-1 xl:grid-cols-2 gap-x-6 gap-y-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+              <span className="text-sm font-medium text-zinc-100">
+                Finviz research
+              </span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
+                on-demand
+              </span>
+            </div>
+            <div className="text-xs text-zinc-500 mb-2">
+              One-shot research via Finviz-style web screening. Saves a
+              markdown report to Insights.
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={researchQuery}
+                onChange={(e) => setResearchQuery(e.target.value)}
+                placeholder="Query (optional)"
+                disabled={isPending}
+                className="flex-1 min-w-0 rounded-lg border border-white/[0.08] bg-black/30 px-3 py-1.5 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 disabled:opacity-50 transition-colors"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleResearch();
+                }}
+              />
+              <button
+                onClick={handleResearch}
+                disabled={isPending}
+                className="flex-shrink-0 rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                {isPending ? "…" : "Run"}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+              <span className="text-sm font-medium text-zinc-100">
+                Glassnode snapshot
+              </span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
+                on-demand
+              </span>
+            </div>
+            <div className="text-xs text-zinc-500 mb-2">
+              On-chain crypto read (BTC/ETH MVRV, SOPR, flows, holder
+              behavior). Saves a markdown report to Insights.
             </div>
             <button
               onClick={handleGlassnode}
               disabled={isPending}
-              className="flex-shrink-0 rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
+              className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
             >
               {isPending ? "…" : "Run snapshot"}
             </button>
@@ -276,12 +272,12 @@ function ScannerRowView({
   onRun: () => void;
 }) {
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <div className="flex items-center gap-3 min-w-0">
+    <div>
+      <div className="flex items-center gap-2 min-w-0">
         <button
           onClick={onToggle}
           disabled={disabled}
-          className={`relative h-6 w-11 rounded-full border transition-all flex-shrink-0 ${
+          className={`relative h-5 w-9 rounded-full border transition-all flex-shrink-0 ${
             scanner.enabled
               ? "bg-accent/90 border-accent"
               : "bg-zinc-800 border-white/10"
@@ -289,53 +285,41 @@ function ScannerRowView({
           aria-label={scanner.enabled ? "Disable" : "Enable"}
         >
           <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${
-              scanner.enabled ? "left-[22px]" : "left-0.5"
+            className={`absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all ${
+              scanner.enabled ? "left-[18px]" : "left-0.5"
             }`}
           />
         </button>
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                scanner.enabled
-                  ? "bg-accent shadow-[0_0_6px_rgba(86, 118, 220,0.6)]"
-                  : "bg-zinc-600"
-              }`}
-            />
-            <span className="text-sm font-medium text-zinc-100">
-              {scanner.label}
-            </span>
-            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
-              {scanner.key}
-            </span>
-          </div>
-          <div className="text-xs text-zinc-500 mt-0.5 truncate">
-            {scanner.description} · last run {timeAgo(scanner.lastRunAt)}
-          </div>
+        <span className="text-sm font-medium text-zinc-100 truncate">
+          {scanner.label}
+        </span>
+        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 flex-shrink-0">
+          {scanner.key}
+        </span>
+        <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+          <select
+            value={scanner.intervalMinutes}
+            onChange={(e) => onInterval(Number(e.target.value))}
+            disabled={disabled || !scanner.enabled}
+            className="rounded-md bg-zinc-900 border border-white/10 text-zinc-100 text-[11px] px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
+          >
+            {INTERVAL_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={onRun}
+            disabled={disabled}
+            className="rounded-md bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-2 py-1 text-[11px] font-medium disabled:opacity-50 transition-colors"
+          >
+            Run
+          </button>
         </div>
       </div>
-
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <select
-          value={scanner.intervalMinutes}
-          onChange={(e) => onInterval(Number(e.target.value))}
-          disabled={disabled || !scanner.enabled}
-          className="rounded-lg bg-zinc-900 border border-white/10 text-zinc-100 text-xs px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent/50 disabled:opacity-50"
-        >
-          {INTERVAL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={onRun}
-          disabled={disabled}
-          className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-xs font-medium disabled:opacity-50 transition-colors"
-        >
-          Run
-        </button>
+      <div className="text-[11px] text-zinc-500 mt-1 pl-11 truncate">
+        {scanner.description} · last run {timeAgo(scanner.lastRunAt)}
       </div>
     </div>
   );
