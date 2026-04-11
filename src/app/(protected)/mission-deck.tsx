@@ -235,7 +235,7 @@ export function MissionDeck() {
                   onClick={() => setOpenTile(tile)}
                   className="relative bg-[#07090d] hover:bg-white/[0.015] transition-colors text-left group"
                   style={{
-                    height: 190,
+                    height: 140,
                     boxShadow: `inset 0 2px 0 0 ${accent}`,
                   }}
                 >
