@@ -205,7 +205,7 @@ export function ChatInterface() {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-white/[0.06] bg-[#07090d]/90 backdrop-blur px-4 py-3">
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
