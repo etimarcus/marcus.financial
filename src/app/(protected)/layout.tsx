@@ -92,9 +92,9 @@ export default async function ProtectedLayout({
           <img
             src="/logo.png"
             alt="marcus.financial"
-            width={354}
-            height={101}
-            className="max-w-full h-auto"
+            width={168}
+            height={120}
+            className="h-auto"
           />
         </a>
       </div>

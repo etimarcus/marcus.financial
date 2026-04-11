@@ -16,9 +16,9 @@ export default function LoginPage() {
         <img
           src="/logo.png"
           alt="marcus.financial"
-          width={417}
-          height={119}
-          className="max-w-full h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
+          width={168}
+          height={120}
+          className="h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
         />
 
         <form
