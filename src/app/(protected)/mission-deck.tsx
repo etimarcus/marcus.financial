@@ -217,7 +217,7 @@ export function MissionDeck() {
             </div>
           </div>
 
-          <div className="h-[46px] border-b border-white/[0.06]">
+          <div className="h-[54px] border-b border-white/[0.06]">
             <iframe
               title="Ticker tape"
               srcDoc={tickerDoc}
@@ -226,27 +226,25 @@ export function MissionDeck() {
             />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-px bg-white/[0.04]">
             {TILES.map((tile) => {
               const accent = GROUP_ACCENT[tile.group];
               return (
                 <button
                   key={tile.symbol}
                   onClick={() => setOpenTile(tile)}
-                  className="relative border-r border-b border-white/[0.04] hover:bg-accent/[0.04] transition-all text-left group"
-                  style={{ height: 170 }}
+                  className="relative bg-[#07090d] hover:bg-white/[0.015] transition-colors text-left group"
+                  style={{
+                    height: 190,
+                    boxShadow: `inset 0 2px 0 0 ${accent}`,
+                  }}
                 >
                   <span
-                    className="absolute top-1.5 left-2 z-10 text-[9px] font-mono uppercase tracking-[0.15em] font-bold pointer-events-none"
-                    style={{ color: accent, textShadow: `0 0 8px ${accent}66` }}
-                  >
-                    {tile.label}
-                  </span>
-                  <span
-                    className="absolute top-1.5 right-2 z-10 h-1 w-1 rounded-full pointer-events-none"
+                    aria-hidden
+                    className="absolute top-1.5 right-1.5 z-10 h-1 w-1 rounded-full pointer-events-none"
                     style={{
                       backgroundColor: accent,
-                      boxShadow: `0 0 6px ${accent}`,
+                      boxShadow: `0 0 6px ${accent}, 0 0 12px ${accent}80`,
                     }}
                   />
                   <iframe

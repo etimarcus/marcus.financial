@@ -29,7 +29,7 @@ export function ProposalsPanel({
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-2">
         Pending proposals ({proposals.length})
       </h2>
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         {proposals.map((p) => (
           <ProposalCard key={p.id} proposal={p} />
         ))}
@@ -86,7 +86,7 @@ function ProposalCard({ proposal }: { proposal: PendingProposal }) {
   }
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-5">
+    <div className="rounded-xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/70 to-zinc-950/70 backdrop-blur p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
