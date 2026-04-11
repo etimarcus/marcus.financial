@@ -215,7 +215,7 @@ export function ChatInterface() {
                 send();
               }
             }}
-            placeholder={pending ? "Waiting…" : "Ask the agent…"}
+            placeholder={pending ? "Waiting…" : ""}
             disabled={pending}
             rows={2}
             className="flex-1 resize-none rounded-lg border border-white/[0.08] bg-zinc-950/60 px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-accent/40 focus:ring-1 focus:ring-accent/30 disabled:opacity-50 transition-colors"

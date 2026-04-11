@@ -25,7 +25,7 @@ export function ChatDrawer() {
       {open && (
         <div
           onClick={() => setOpen(false)}
-          className="fixed inset-0 z-[99]"
+          className="fixed inset-0 z-[99] bg-black/40 backdrop-blur-sm"
           aria-hidden="true"
         />
       )}
