@@ -251,14 +251,6 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
         <div className="space-y-5">
           {messages.length === 0 && (
             <div className="py-8">
-              <div className="text-center mb-6">
-                <h2 className="text-base font-semibold text-zinc-100 mb-1">
-                  Ready to analyze.
-                </h2>
-                <p className="text-xs text-zinc-500">
-                  Ask about markets, your portfolio, or a ticker.
-                </p>
-              </div>
               <div className="space-y-2">
                 {STARTERS.map((s) => (
                   <button
