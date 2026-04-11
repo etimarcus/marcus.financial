@@ -21,14 +21,23 @@ export function ChatDrawer() {
   }, []);
 
   const drawer = (
-    <aside
-      className={`fixed right-0 top-0 z-[100] h-screen w-full md:w-[440px] border-l border-white/[0.08] bg-[#07090d]/95 backdrop-blur-xl shadow-[0_0_60px_-15px_rgba(86,118,220,0.25)] transform transition-transform duration-300 ease-out ${
-        open ? "translate-x-0" : "translate-x-full"
-      }`}
-      aria-hidden={!open}
-    >
-      <ChatInterface onClose={() => setOpen(false)} />
-    </aside>
+    <>
+      {open && (
+        <div
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-[99]"
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed right-0 top-0 z-[100] h-screen w-full md:w-[440px] border-l border-white/[0.08] bg-[#07090d]/95 backdrop-blur-xl shadow-[0_0_60px_-15px_rgba(86,118,220,0.25)] transform transition-transform duration-300 ease-out ${
+          open ? "translate-x-0" : "translate-x-full"
+        }`}
+        aria-hidden={!open}
+      >
+        <ChatInterface />
+      </aside>
+    </>
   );
 
   return (

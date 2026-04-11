@@ -3,7 +3,7 @@ import { getSession } from "@/lib/session";
 import { logout } from "../login/actions";
 import { ChatDrawer } from "./chat-drawer";
 import { HeaderClock } from "./header-clock";
-import { getAccount, getClock } from "@/lib/alpaca";
+import { getClock } from "@/lib/alpaca";
 
 export default async function ProtectedLayout({
   children,
@@ -16,9 +16,8 @@ export default async function ProtectedLayout({
   }
 
   let clock: Awaited<ReturnType<typeof getClock>> | null = null;
-  let account: Awaited<ReturnType<typeof getAccount>> | null = null;
   try {
-    [clock, account] = await Promise.all([getClock(), getAccount()]);
+    clock = await getClock();
   } catch {
     // Degrade gracefully — the dashboard itself will surface the error.
   }
@@ -55,14 +54,6 @@ export default async function ProtectedLayout({
                 }`}
               />
               {clock ? (clock.is_open ? "market open" : "market closed") : "—"}
-            </span>
-            <span className="text-zinc-700">·</span>
-            <span className="font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200">
-              {account?.status?.toLowerCase() ?? "—"}
-            </span>
-            <span className="text-zinc-700">·</span>
-            <span className="font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200">
-              paper
             </span>
           </div>
           <div className="flex items-center gap-3">
