@@ -4,6 +4,7 @@ import { logout } from "../login/actions";
 import { ChatDrawer } from "./chat-drawer";
 import { HeaderClock } from "./header-clock";
 import { HeatmapButtons } from "./heatmap-buttons";
+import { MissionControl } from "./mission-control";
 import { getClock } from "@/lib/alpaca";
 
 export default async function ProtectedLayout({
@@ -56,6 +57,9 @@ export default async function ProtectedLayout({
               />
               {clock ? (clock.is_open ? "market open" : "market closed") : "—"}
             </span>
+          </div>
+          <div className="flex items-center">
+            <MissionControl />
           </div>
           <div className="flex items-center gap-3">
             <HeatmapButtons />
