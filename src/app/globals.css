@@ -33,6 +33,7 @@ body {
 }
 
 body {
+  position: relative;
   background-image:
     radial-gradient(
       ellipse 1000px 600px at 50% -200px,
@@ -45,9 +46,11 @@ body {
       transparent 60%
     );
   background-attachment: fixed;
+  z-index: 0;
 }
 
-/* Subtle grid pattern overlay */
+/* Subtle grid pattern overlay — sits behind content without creating
+   a competing stacking context for React portals. */
 body::before {
   content: "";
   position: fixed;
@@ -57,16 +60,7 @@ body::before {
     linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   background-size: 48px 48px;
   pointer-events: none;
-  z-index: 0;
-}
-
-/* Ensure content sits above the pattern */
-#__next,
-main,
-header,
-body > div {
-  position: relative;
-  z-index: 1;
+  z-index: -1;
 }
 
 /* Tabular numbers wherever we show financial figures */
