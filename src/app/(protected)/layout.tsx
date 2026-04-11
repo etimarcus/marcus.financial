@@ -38,9 +38,9 @@ export default async function ProtectedLayout({
               <img
                 src="/icon.png"
                 alt="marcus.financial shield"
-                width={62}
-                height={62}
-                className="h-[62px] w-[62px] drop-shadow-[0_0_12px_rgba(242,214,106,0.25)]"
+                width={48}
+                height={48}
+                className="h-12 w-12 drop-shadow-[0_0_12px_rgba(242,214,106,0.25)]"
               />
             </a>
             <HeaderClock />
