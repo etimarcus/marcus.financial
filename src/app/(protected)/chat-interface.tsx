@@ -53,10 +53,35 @@ function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+type Thread = {
+  id: string;
+  user: ChatMessage | null;
+  assistants: ChatMessage[];
+};
+
+function buildThreads(messages: ChatMessage[]): Thread[] {
+  const threads: Thread[] = [];
+  let current: Thread | null = null;
+  for (const m of messages) {
+    if (m.role === "user") {
+      current = { id: m.id, user: m, assistants: [] };
+      threads.push(current);
+    } else {
+      if (!current) {
+        current = { id: m.id, user: null, assistants: [] };
+        threads.push(current);
+      }
+      current.assistants.push(m);
+    }
+  }
+  return threads;
+}
+
 export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [pending, setPending] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -236,17 +261,32 @@ export function ChatInterface() {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
-        <div className="space-y-5">
-          {pending && messages[messages.length - 1]?.text === "" && (
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-              thinking…
-            </div>
-          )}
-
-          {[...messages].reverse().map((m) => (
-            <MessageBubble key={m.id} message={m} />
-          ))}
+        <div className="space-y-3">
+          {[...buildThreads(messages)].reverse().map((thread, idx, arr) => {
+            const isNewest = idx === 0;
+            const isThinking =
+              isNewest &&
+              pending &&
+              thread.assistants[thread.assistants.length - 1]?.text === "";
+            return (
+              <ThreadBlock
+                key={thread.id}
+                thread={thread}
+                collapsed={collapsed.has(thread.id)}
+                onToggle={() =>
+                  setCollapsed((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(thread.id)) next.delete(thread.id);
+                    else next.add(thread.id);
+                    return next;
+                  })
+                }
+                isThinking={isThinking}
+                isNewest={isNewest}
+                totalThreads={arr.length}
+              />
+            );
+          })}
 
           {messages.length === 0 && (
             <div className="py-8">
@@ -270,37 +310,79 @@ export function ChatInterface() {
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === "user";
-
-  if (isUser) {
-    return (
-      <div className="flex justify-end">
-        <div className="max-w-[90%] rounded-xl rounded-tr-sm bg-accent/10 border border-accent/20 px-3 py-2">
-          <div className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-100">
-            {message.text}
-          </div>
-        </div>
-      </div>
-    );
-  }
+function ThreadBlock({
+  thread,
+  collapsed,
+  onToggle,
+  isThinking,
+  isNewest,
+  totalThreads,
+}: {
+  thread: Thread;
+  collapsed: boolean;
+  onToggle: () => void;
+  isThinking: boolean;
+  isNewest: boolean;
+  totalThreads: number;
+}) {
+  void totalThreads;
+  const title =
+    thread.user?.text.trim() ||
+    (thread.assistants[0]?.text.trim().slice(0, 80) ?? "(empty)");
 
   return (
-    <div className="flex justify-start">
-      <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
-        {message.toolCalls.length > 0 && (
-          <div className="space-y-1">
-            {message.toolCalls.map((tc) => (
-              <ToolChip key={tc.id} toolCall={tc} />
-            ))}
-          </div>
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.015] overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-white/[0.03] transition-colors"
+      >
+        <span className="mt-0.5 text-zinc-500 text-[10px] font-mono flex-shrink-0">
+          {collapsed ? "▸" : "▾"}
+        </span>
+        <span
+          className={`flex-1 min-w-0 text-xs leading-snug ${
+            isNewest ? "text-zinc-100" : "text-zinc-300"
+          } ${collapsed ? "truncate" : "whitespace-pre-wrap"}`}
+        >
+          {title}
+        </span>
+        {isThinking && (
+          <span className="flex-shrink-0 h-1.5 w-1.5 rounded-full bg-accent animate-pulse mt-1.5" />
         )}
-        {message.text && (
-          <div className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-200">
-            {message.text}
-          </div>
-        )}
-      </div>
+      </button>
+
+      {!collapsed && (
+        <div className="px-3 pb-3 pt-1 space-y-2 border-t border-white/[0.04]">
+          {thread.assistants.map((a) => (
+            <AssistantContent key={a.id} message={a} />
+          ))}
+          {isThinking && (
+            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+              thinking…
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AssistantContent({ message }: { message: ChatMessage }) {
+  return (
+    <div className="space-y-1.5">
+      {message.toolCalls.length > 0 && (
+        <div className="space-y-1">
+          {message.toolCalls.map((tc) => (
+            <ToolChip key={tc.id} toolCall={tc} />
+          ))}
+        </div>
+      )}
+      {message.text && (
+        <div className="whitespace-pre-wrap text-xs leading-relaxed text-zinc-200">
+          {message.text}
+        </div>
+      )}
     </div>
   );
 }
