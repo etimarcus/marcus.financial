@@ -32,7 +32,7 @@ export default function LoginPage() {
         height={120}
         className="absolute top-6 right-6 h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
       />
-      <div className="relative w-full max-w-md flex flex-col items-center">
+      <div className="relative w-full max-w-[314px] flex flex-col items-center">
         <form
           action={formAction}
           className="w-full mt-3 space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
@@ -40,7 +40,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-2"
+              className="block text-center text-[11px] font-semibold uppercase tracking-[0.15em] text-[#f2d66a] mb-2"
             >
               Access key
             </label>
