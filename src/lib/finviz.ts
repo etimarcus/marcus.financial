@@ -98,10 +98,14 @@ export async function screenFinviz(
     cache: "no-store",
   });
 
+  console.log(
+    `[finviz_screen] url=${url} status=${res.status}`
+  );
+
   if (res.status >= 300 && res.status < 400) {
-    const loc = res.headers.get("location");
+    const loc = res.headers.get("location") ?? "?";
     throw new Error(
-      `Finviz redirected (${res.status} → ${loc ?? "?"}). The free screener is still expected at finviz.com/screener.ashx; if this persists, Finviz may have paywalled it.`
+      `Finviz redirected ${res.status} → ${loc}. This typically means the caller's IP is being served the paid /elite page. Try web_fetch on the same URL as a fallback — server-side fetches from Anthropic's infra usually succeed where Vercel datacenter IPs get blocked.`
     );
   }
 
@@ -119,6 +123,22 @@ export async function screenFinviz(
   while ((match = ROW_REGEX.exec(html)) !== null) {
     const row = parseRow(match[1]);
     if (row && row.ticker) rows.push(row);
+  }
+
+  console.log(
+    `[finviz_screen] html_length=${html.length} rows_parsed=${rows.length}`
+  );
+
+  if (rows.length === 0) {
+    // Heuristic: the genuine "no matches" page is ~50-80KB. If we got a big
+    // HTML with no rows matching our regex, Finviz likely changed the
+    // markup OR served a different page (login wall, paywall, captcha).
+    // Tell the caller to retry via web_fetch which runs from Anthropic's
+    // infra rather than the caller's server.
+    const headline = html.slice(0, 500).replace(/\s+/g, " ").trim();
+    throw new Error(
+      `Finviz screener returned 0 rows (html=${html.length} bytes). The caller's IP may be seeing a login/paywall/captcha version of the page instead of the data table. Try web_fetch on the same URL as a fallback. HTML head: "${headline.slice(0, 200)}"`
+    );
   }
 
   const limit = Math.min(Math.max(opts.limit ?? 20, 1), 40);
