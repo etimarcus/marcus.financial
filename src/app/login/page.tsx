@@ -21,16 +21,15 @@ export default function LoginPage() {
             "radial-gradient(circle at center, black 0%, black 20%, transparent 65%)",
         }}
       />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.png"
+        alt="marcus.financial"
+        width={168}
+        height={120}
+        className="absolute top-6 right-6 h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
+      />
       <div className="relative w-full max-w-md flex flex-col items-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/logo.png"
-          alt="marcus.financial"
-          width={168}
-          height={120}
-          className="h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
-        />
-
         <form
           action={formAction}
           className="w-full mt-3 space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
