@@ -28,8 +28,8 @@ export default function LoginPage() {
       <img
         src="/logo.png"
         alt="marcus.financial"
-        width={168}
-        height={120}
+        width={202}
+        height={144}
         className="absolute top-6 right-6 h-auto drop-shadow-[0_0_32px_rgba(86,118,220,0.25)]"
       />
       <div className="relative w-full max-w-[314px] flex flex-col items-center">

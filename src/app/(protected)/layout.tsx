@@ -91,8 +91,8 @@ export default async function ProtectedLayout({
           <img
             src="/logo.png"
             alt="marcus.financial"
-            width={168}
-            height={120}
+            width={202}
+            height={144}
             className="h-auto"
           />
         </a>
