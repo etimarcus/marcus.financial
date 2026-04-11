@@ -25,6 +25,7 @@ import {
   type ScannerRow,
 } from "./scanners-panel";
 import { InsightsPanel, type InsightRow } from "./insights-panel";
+import { MissionDeck } from "./mission-deck";
 import { loadAllScannerConfigs } from "@/lib/scheduled-scan";
 
 function fmtUsd(value: string | number) {
@@ -266,6 +267,8 @@ export default async function Dashboard() {
 
   return (
     <main className="px-6 pb-10 space-y-6">
+      <MissionDeck />
+
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Stat label="Equity" value={fmtUsd(account.equity)} big />
         <Stat
