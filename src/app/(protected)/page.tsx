@@ -110,7 +110,7 @@ async function getWatchlistWithMarketData(): Promise<{
 }
 
 const SCANNER_META: Record<
-  "alpaca" | "tradingview" | "polymarket" | "gaming",
+  "alpaca" | "tradingview" | "polymarket" | "gaming" | "pharma",
   { label: string; description: string }
 > = {
   alpaca: {
@@ -130,6 +130,10 @@ const SCANNER_META: Record<
     label: "Gaming industry",
     description: "Tracks game releases and publisher catalysts",
   },
+  pharma: {
+    label: "Pharma & biotech",
+    description: "FDA approvals, trial readouts, PDUFA, M&A",
+  },
 };
 
 function isoish(value: unknown): string {
@@ -142,7 +146,12 @@ async function getScannersPanelData(): Promise<ScannersPanelProps> {
   const configs = await loadAllScannerConfigs();
   const scanners: ScannerRow[] = configs
     .filter((c): c is typeof c & {
-      scanner_key: "alpaca" | "tradingview" | "polymarket" | "gaming";
+      scanner_key:
+        | "alpaca"
+        | "tradingview"
+        | "polymarket"
+        | "gaming"
+        | "pharma";
     } => c.scanner_key in SCANNER_META)
     .map((c) => ({
       key: c.scanner_key,

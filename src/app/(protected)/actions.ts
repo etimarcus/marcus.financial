@@ -249,6 +249,7 @@ const SCHEDULED_KEYS: ScannerKey[] = [
   "tradingview",
   "polymarket",
   "gaming",
+  "pharma",
 ];
 
 function isScheduledKey(k: string): k is ScannerKey {

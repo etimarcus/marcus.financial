@@ -9,7 +9,8 @@ export type ScannerKey =
   | "polymarket"
   | "finviz"
   | "glassnode"
-  | "gaming";
+  | "gaming"
+  | "pharma";
 
 export type ScanResult = {
   ok: boolean;
@@ -221,6 +222,55 @@ Process:
 7. If the catalyst is interesting but not actionable as a same-day trade (longer-horizon thesis, non-US listing, no clean setup yet), call save_insight with source='gaming', kind='market_insight'. Title should be terse (e.g. "GTA VI trailer 2 drops — TTWO catalyst in Q2"), body should cover: the release/event, which ticker(s), timeframe, why it matters, and current price context.
 8. Be ruthless on quality. A bad trade is worse than no trade. A junk insight is worse than no insight.
 9. MANDATORY: finish with a one-paragraph text summary in your final assistant turn. What launches/events you found, which tickers you linked them to, which (if any) proposals/insights you produced. Never end silently.
+
+Start now.`,
+  },
+
+  pharma: {
+    key: "pharma",
+    scheduled: true,
+    requiresMarketOpen: false,
+    bypassWhitelist: true,
+    buildKickoff: ({ now }) => `[Pharma & biotech scan · ${now}]
+
+You're tracking the pharmaceutical and biotech industry for catalysts that move drug-maker stocks: FDA approvals/rejections, clinical trial readouts (Phase 1/2/3), PDUFA dates, breakthrough therapy designations, label expansions, M&A, licensing deals, and major drug launches. Single catalysts can move biotechs 30-80% in a day — your job is to surface them early or right on the news.
+
+Tradeable pharma-exposed tickers to keep in mind (US-listed primary). Don't limit yourself to this list — surface any US-listed ticker if you find a catalyst on it:
+- Big pharma: PFE, MRK, LLY, BMY, JNJ, ABBV, AMGN, GILD, NVS, AZN, GSK, SNY, NVO, TAK, BAYRY, RHHBY
+- Large biotech: VRTX, REGN, BIIB, MRNA, BNTX, INCY, ALNY, BMRN, HALO, NBIX, SGEN
+- Mid/small biotech (volatile, high-signal): BEAM, CRSP, NTLA, EDIT, VKTX, SMMT, RXRX, BIIB, SRPT, IONS, ARWR, KRYS, CDMO
+- Medtech/devices: ISRG, SYK, BSX, EW, ZBH, DXCM, ABT, MDT
+- Tools & supplies: TMO, DHR, ILMN, A, WAT, RMD, IQV, CRL, LH, DGX
+- Distribution / PBM / managed care adjacencies: CVS, CI, UNH, HUM, ELV, MCK, COR, ABC (if a pharma catalyst meaningfully affects them)
+
+Process:
+1. Call get_clock first so you know the US market state. Biotech news breaks at all hours (pre-market trial readouts are common, FDA decisions drop after close). Market closed is NOT a reason to skip — proposals saved outside RTH will queue as LIMIT orders.
+2. Use web_search with queries tuned to surface fresh pharma catalysts:
+   - "FDA approval this week"
+   - "PDUFA date calendar upcoming"
+   - "Phase 3 readout this month"
+   - "biotech clinical trial results today"
+   - "FDA breakthrough therapy designation"
+   - "biotech M&A acquisition announcement"
+   - "drug label expansion FDA approved"
+   - "oncology Phase 2 data positive"
+   - "GLP-1 weight loss obesity drug update" (hot theme)
+   - "Alzheimer's drug trial results"
+   - Company-specific when you have a lead: "Eli Lilly donanemab news", "Vertex sickle cell approval", etc.
+   Also useful site targeting via web_fetch: endpts.com, fiercebiotech.com, statnews.com, biopharmadive.com, fda.gov/drugs/news-events-human-drugs. Prefer fresh content (last 7-14 days).
+3. For each meaningful catalyst, note:
+   - Company + ticker
+   - Drug name + indication (what disease it treats)
+   - Catalyst type: approval, rejection, PDUFA, trial readout, M&A, licensing, label expansion, recall, black-box warning, breakthrough designation
+   - When: already happened vs upcoming (date)
+   - Direction of signal: bullish / bearish / binary-pending
+   - Market cap context: small biotechs have way more room to move than big pharma
+4. Call get_positions and get_proposals in parallel to build a skip-set of tickers already in play. Don't duplicate.
+5. For the most interesting 2-4 catalysts NOT in the skip-set, pull calculate_indicators (1Day, 250 lookback) and get_news (5 articles) on the primary ticker to verify the technical setup and confirm the news is not already priced in.
+6. If a clean setup exists with honest confidence >= 0.7, call propose_trade. Use type='limit' with stop_loss and take_profit (bracket). Size at no more than 2% of equity — biotech binaries can gap hard in either direction, so position sizing matters more here than on mega-cap names. The whitelist guardrail is RELAXED for this scanner.
+7. If the catalyst is interesting but not actionable (binary PDUFA coming in 30 days, too volatile to trade directionally, setup unclear, or you'd rather flag it for awareness), call save_insight with source='pharma', kind='market_insight'. Title should be terse (e.g. "PDUFA 05/17 — Vertex sickle cell CASGEVY label expansion"), body should cover: the drug, the indication, the catalyst + date, the ticker, current price + recent action, why it matters, and whether you'd consider a trade later.
+8. Be ruthless on quality. Biotech is full of pump signals. A bad proposal here can cost 20%+ overnight.
+9. MANDATORY: finish with a one-paragraph text summary in your final assistant turn. What catalysts you found, which tickers you linked them to, which (if any) proposals/insights you produced. Never end silently.
 
 Start now.`,
   },

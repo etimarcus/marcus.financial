@@ -75,7 +75,8 @@ VALUES
   ('alpaca', TRUE, 15),
   ('tradingview', TRUE, 30),
   ('polymarket', FALSE, 60),
-  ('gaming', FALSE, 240)
+  ('gaming', FALSE, 240),
+  ('pharma', FALSE, 240)
 ON CONFLICT (scanner_key) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS insights (
