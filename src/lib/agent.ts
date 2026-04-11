@@ -650,11 +650,12 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
       const stream = client.messages.stream(streamParams);
 
       for await (const event of stream) {
-        if (event.type === "message_start") {
-          // Capture container id from the raw stream event. The SDK's
-          // stream.finalMessage() does not reliably populate this field on
-          // the resulting snapshot, so we grab it directly off the wire.
-          const incoming = event.message.container;
+        if (event.type === "message_delta") {
+          // Capture container id from the end-of-message delta. Per the
+          // SDK type docs: "container is null in the message_start event
+          // and non-null otherwise" — it arrives in message_delta.delta
+          // at the end of the stream, not at the beginning.
+          const incoming = event.delta.container;
           if (incoming && incoming.id) {
             containerId = incoming.id;
           }
@@ -669,8 +670,9 @@ export async function runAgent(opts: RunAgentOptions): Promise<void> {
 
       const message = await stream.finalMessage();
 
-      // Fallback: if finalMessage did happen to populate container, prefer
-      // the newer value (the API can return a different id on a new turn).
+      // Fallback: finalMessage might populate container too in some SDK
+      // versions. Prefer whichever is newer (the API can return a different
+      // id on each turn).
       if (message.container?.id) {
         containerId = message.container.id;
       }
