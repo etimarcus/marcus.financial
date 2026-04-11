@@ -73,10 +73,7 @@ export function ChatInterface() {
   }, [messages]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [messages, pending]);
 
   async function sendWith(text: string) {
@@ -240,6 +237,17 @@ export function ChatInterface() {
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-5">
         <div className="space-y-5">
+          {pending && messages[messages.length - 1]?.text === "" && (
+            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
+              thinking…
+            </div>
+          )}
+
+          {[...messages].reverse().map((m) => (
+            <MessageBubble key={m.id} message={m} />
+          ))}
+
           {messages.length === 0 && (
             <div className="py-8">
               <div className="space-y-2">
@@ -253,17 +261,6 @@ export function ChatInterface() {
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-
-          {messages.map((m) => (
-            <MessageBubble key={m.id} message={m} />
-          ))}
-
-          {pending && messages[messages.length - 1]?.text === "" && (
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-              thinking…
             </div>
           )}
         </div>
