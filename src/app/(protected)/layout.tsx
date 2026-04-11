@@ -90,7 +90,7 @@ export default async function ProtectedLayout({
         <a href="/" aria-label="marcus.financial home" className="inline-block">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/marcus%20financial.png"
+            src="/logo.png"
             alt="marcus.financial"
             width={354}
             height={101}
