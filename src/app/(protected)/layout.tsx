@@ -59,16 +59,6 @@ export default async function ProtectedLayout({
           </div>
           <div className="flex items-center gap-3">
             <ChatDrawer />
-            <a href="/" aria-label="marcus.financial home" className="inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="marcus.financial"
-                width={168}
-                height={120}
-                className="h-auto"
-              />
-            </a>
             <form action={logout}>
               <button
                 type="submit"
@@ -95,6 +85,19 @@ export default async function ProtectedLayout({
           </div>
         </div>
       </header>
+
+      <div className="flex justify-end px-6 pt-4">
+        <a href="/" aria-label="marcus.financial home" className="inline-block">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="marcus.financial"
+            width={168}
+            height={120}
+            className="h-auto"
+          />
+        </a>
+      </div>
 
       <div className="flex-1">{children}</div>
     </div>
