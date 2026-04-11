@@ -35,12 +35,12 @@ export default function LoginPage() {
       <div className="relative w-full max-w-[314px] flex flex-col items-center">
         <form
           action={formAction}
-          className="w-full mt-3 space-y-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur p-6"
+          className="w-full space-y-2 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-zinc-900/60 to-zinc-950/60 backdrop-blur px-4 py-3"
         >
           <div>
             <label
               htmlFor="password"
-              className="block text-center text-[11px] font-semibold uppercase tracking-[0.15em] text-[#f2d66a] mb-2"
+              className="block text-center text-[11px] font-semibold uppercase tracking-[0.15em] text-[#f2d66a] mb-1"
             >
               Access key
             </label>
@@ -50,7 +50,7 @@ export default function LoginPage() {
               name="password"
               autoComplete="current-password"
               required
-              className="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-2.5 text-zinc-100 font-mono focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-colors"
+              className="w-full rounded-lg border border-white/[0.08] bg-black/30 px-3 py-1.5 text-zinc-100 font-mono focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-colors"
               placeholder="••••••••"
             />
           </div>
@@ -60,7 +60,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-lg bg-accent text-black py-2.5 font-semibold hover:bg-accent-light disabled:opacity-50 transition-colors shadow-[0_0_24px_rgba(86, 118, 220,0.3)]"
+            className="w-full rounded-lg bg-accent text-black py-1.5 font-semibold hover:bg-accent-light disabled:opacity-50 transition-colors shadow-[0_0_24px_rgba(86, 118, 220,0.3)]"
           >
             {pending ? "Authenticating…" : "Sign in"}
           </button>
