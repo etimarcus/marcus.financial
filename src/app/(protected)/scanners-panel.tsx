@@ -10,7 +10,7 @@ import {
 } from "./actions";
 
 export type ScannerRow = {
-  key: "alpaca" | "tradingview" | "polymarket";
+  key: "alpaca" | "tradingview" | "polymarket" | "gaming";
   label: string;
   description: string;
   enabled: boolean;

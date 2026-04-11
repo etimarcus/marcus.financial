@@ -8,7 +8,8 @@ export type ScannerKey =
   | "tradingview"
   | "polymarket"
   | "finviz"
-  | "glassnode";
+  | "glassnode"
+  | "gaming";
 
 export type ScanResult = {
   ok: boolean;
@@ -163,6 +164,63 @@ Process:
    - symbols: [array of tickers analyzed]
 6. Do NOT call propose_trade. This is research.
 7. MANDATORY: finish with a one-sentence text summary in your final assistant turn so the run log has context. Even if everything went wrong and you saved nothing, write a sentence explaining what failed and why. Do not end the turn silently — a silent turn shows as "(no summary)" in the dashboard which gives the operator zero information.
+
+Start now.`,
+  },
+
+  gaming: {
+    key: "gaming",
+    scheduled: true,
+    requiresMarketOpen: false,
+    bypassWhitelist: true,
+    buildKickoff: ({ now }) => `[Gaming industry scan · ${now}]
+
+You're tracking the video game industry for upcoming releases, recent launches, and publisher/developer news that can move the stocks of gaming companies. Gaming releases — especially AAA launches, sequels in established franchises, and expansions to live-service games — can produce sharp revenue spikes and move prices meaningfully. Your job is to surface those signals.
+
+Tradeable gaming-exposed tickers to keep in mind (this is context — propose trades only on the ones listed on US exchanges):
+- Take-Two Interactive (TTWO) — GTA, Red Dead, 2K
+- Electronic Arts (EA) — FIFA/EA FC, Madden, Apex, Battlefield, Dragon Age
+- Microsoft (MSFT) — Xbox, Activision Blizzard (Call of Duty, Diablo, WoW, Overwatch)
+- Sony (SONY) — PlayStation, first-party studios (God of War, Spider-Man, Last of Us)
+- Nintendo (NTDOY) — Switch / Switch 2, Zelda, Mario, Pokemon
+- Roblox (RBLX) — UGC platform
+- Unity (U) — engine + services
+- NetEase (NTES) — Chinese publisher
+- Tencent (TCEHY) — League of Legends, PUBG, Honor of Kings
+- Ubisoft (UBSFY) — Assassin's Creed, Far Cry, Rainbow Six
+- CD Projekt (OTGLY) — Cyberpunk, Witcher
+- Embracer Group (THQQY)
+- Devolver Digital (DVVLY)
+- Krafton (KRFTF)
+- Playtika (PLTK)
+- GameStop (GME)
+- Corsair (CRSR), Logitech (LOGI) — hardware
+- AMD (AMD), NVIDIA (NVDA) — GPU/console silicon (only call out when a gaming-specific catalyst matters, not for generic AI news)
+
+Process:
+1. Call get_clock first so you know the US market state. Market closed is NOT a reason to skip — gaming launches happen on their own calendar and proposals saved outside RTH will queue as LIMIT orders for the user to approve when they wake up.
+2. Use web_search with queries like:
+   - "upcoming video game releases this week"
+   - "AAA game launch calendar 2026"
+   - "biggest game release opening weekend sales"
+   - "Steam concurrent players top 10 this week"
+   - "Xbox PlayStation Switch game release schedule"
+   - "game publisher earnings guidance raised lowered"
+   - "Call of Duty Black Ops release date"
+   - Publisher-specific: "Take-Two upcoming releases", "EA sports calendar 2026", etc.
+   Focus on launches in the next 30 days, launches in the past 14 days (for momentum reads), and surprise announcements/delays.
+3. For each meaningful catalyst you find, note:
+   - Title + developer + publisher
+   - Platform(s)
+   - Release date (confirmed or rumored, flag which)
+   - Which tradeable ticker(s) benefit
+   - Signal type: pre-launch anticipation, post-launch sales beat/miss, delay, controversy, record concurrents, expansion/DLC drop
+4. Call get_positions and get_proposals in parallel. Build a skip-set of tickers already in play so you don't duplicate.
+5. For the most interesting 2-4 catalysts — NOT in the skip-set — pull calculate_indicators (1Day, 250 lookback) and get_news (5 articles) on the primary ticker to verify the technical setup and confirm the news is already priced in or not.
+6. If a clean setup exists with honest confidence >= 0.7, call propose_trade. Use type='limit' with stop_loss and take_profit (bracket). Size at no more than 2% of equity. The whitelist guardrail is RELAXED for this scanner — you may propose on tickers outside the watchlist.
+7. If the catalyst is interesting but not actionable as a same-day trade (longer-horizon thesis, non-US listing, no clean setup yet), call save_insight with source='gaming', kind='market_insight'. Title should be terse (e.g. "GTA VI trailer 2 drops — TTWO catalyst in Q2"), body should cover: the release/event, which ticker(s), timeframe, why it matters, and current price context.
+8. Be ruthless on quality. A bad trade is worse than no trade. A junk insight is worse than no insight.
+9. MANDATORY: finish with a one-paragraph text summary in your final assistant turn. What launches/events you found, which tickers you linked them to, which (if any) proposals/insights you produced. Never end silently.
 
 Start now.`,
   },

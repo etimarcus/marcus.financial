@@ -244,7 +244,12 @@ export async function removeFromWatchlist(
 }
 
 const ALLOWED_INTERVALS = [5, 10, 15, 30, 60, 120, 240] as const;
-const SCHEDULED_KEYS: ScannerKey[] = ["alpaca", "tradingview", "polymarket"];
+const SCHEDULED_KEYS: ScannerKey[] = [
+  "alpaca",
+  "tradingview",
+  "polymarket",
+  "gaming",
+];
 
 function isScheduledKey(k: string): k is ScannerKey {
   return (SCHEDULED_KEYS as string[]).includes(k);
