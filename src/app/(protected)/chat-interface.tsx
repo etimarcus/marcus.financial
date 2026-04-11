@@ -204,18 +204,7 @@ export function ChatInterface({ onClose }: { onClose?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="border-b border-white/[0.06] px-4 py-3 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-[0_0_8px_rgba(86, 118, 220,0.8)]" />
-            <h1 className="text-sm font-semibold tracking-tight text-zinc-100">
-              Analyst
-            </h1>
-          </div>
-          <p className="text-[10px] text-zinc-500 mt-0.5 font-mono uppercase tracking-wider">
-            opus 4.6 · read + propose
-          </p>
-        </div>
+      <div className="border-b border-white/[0.06] px-4 py-3 flex items-center justify-end">
         <div className="flex items-center gap-3">
           <button
             onClick={clear}
