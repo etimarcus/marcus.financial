@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 type Tile = {
   symbol: string;
   label: string;
-  group: "equity" | "macro" | "commodity" | "crypto";
+  group: "equity" | "macro" | "fx" | "commodity" | "crypto";
 };
 
 const TILES: Tile[] = [
@@ -18,8 +18,11 @@ const TILES: Tile[] = [
   { symbol: "TVC:DXY", label: "DXY", group: "macro" },
   { symbol: "TVC:US10Y", label: "US 10Y", group: "macro" },
   { symbol: "TVC:US02Y", label: "US 2Y", group: "macro" },
+  { symbol: "FX_IDC:USDJPY", label: "USD/JPY", group: "fx" },
+  { symbol: "FX_IDC:USDCNH", label: "USD/CNH", group: "fx" },
   { symbol: "OANDA:XAUUSD", label: "Gold", group: "commodity" },
   { symbol: "TVC:USOIL", label: "WTI Crude", group: "commodity" },
+  { symbol: "AMEX:BDRY", label: "Dry Bulk Shipping", group: "commodity" },
   { symbol: "BINANCE:BTCUSDT", label: "BTC", group: "crypto" },
   { symbol: "BINANCE:ETHUSDT", label: "ETH", group: "crypto" },
 ];
@@ -27,9 +30,13 @@ const TILES: Tile[] = [
 const GROUP_ACCENT: Record<Tile["group"], string> = {
   equity: "#5676dc",
   macro: "#f2d66a",
+  fx: "#4fd1c5",
   commodity: "#e6a855",
   crypto: "#7b94e5",
 };
+
+const CANDLE_UP = "#5676dc";
+const CANDLE_DOWN = "#f2d66a";
 
 const TICKER_TAPE_CONFIG = {
   symbols: [
@@ -41,10 +48,13 @@ const TICKER_TAPE_CONFIG = {
     { proName: "TVC:DXY", title: "DXY" },
     { proName: "TVC:US10Y", title: "US10Y" },
     { proName: "TVC:US02Y", title: "US2Y" },
+    { proName: "FX_IDC:USDJPY", title: "USD/JPY" },
+    { proName: "FX_IDC:USDCNH", title: "USD/CNH" },
     { proName: "OANDA:XAUUSD", title: "Gold" },
     { proName: "OANDA:XAGUSD", title: "Silver" },
     { proName: "TVC:USOIL", title: "WTI" },
     { proName: "TVC:UKOIL", title: "Brent" },
+    { proName: "AMEX:BDRY", title: "Shipping" },
     { proName: "BINANCE:BTCUSDT", title: "BTC" },
     { proName: "BINANCE:ETHUSDT", title: "ETH" },
     { proName: "BINANCE:SOLUSDT", title: "SOL" },
@@ -77,24 +87,37 @@ function buildSrcDoc(scriptUrl: string, config: unknown): string {
 </html>`;
 }
 
-function buildMiniChartDoc(symbol: string): string {
+function buildTileChartDoc(tile: Tile): string {
   return buildSrcDoc(
-    "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js",
+    "https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js",
     {
-      symbol,
+      symbols: [[tile.label, `${tile.symbol}|1D`]],
+      chartOnly: false,
       width: "100%",
       height: "100%",
       locale: "en",
-      dateRange: "1D",
       colorTheme: "dark",
-      isTransparent: true,
       autosize: true,
-      largeChartUrl: "",
-      chartOnly: false,
-      noTimeScale: false,
-      trendLineColor: "rgba(86, 118, 220, 1)",
-      underLineColor: "rgba(86, 118, 220, 0.15)",
-      underLineBottomColor: "rgba(86, 118, 220, 0)",
+      showVolume: false,
+      hideDateRanges: true,
+      hideMarketStatus: true,
+      hideSymbolLogo: true,
+      scalePosition: "right",
+      scaleMode: "Normal",
+      fontFamily:
+        "-apple-system, BlinkMacSystemFont, Trebuchet MS, Roboto, Ubuntu, sans-serif",
+      fontSize: "10",
+      noTimeScale: true,
+      valuesTracking: "1",
+      changeMode: "price-and-percent",
+      chartType: "candlesticks",
+      upColor: CANDLE_UP,
+      downColor: CANDLE_DOWN,
+      borderUpColor: CANDLE_UP,
+      borderDownColor: CANDLE_DOWN,
+      wickUpColor: CANDLE_UP,
+      wickDownColor: CANDLE_DOWN,
+      isTransparent: true,
     }
   );
 }
@@ -116,6 +139,14 @@ function buildAdvancedChartDoc(symbol: string): string {
       hide_side_toolbar: false,
       studies: ["Volume@tv-basicstudies", "MACD@tv-basicstudies"],
       support_host: "https://www.tradingview.com",
+      overrides: {
+        "mainSeriesProperties.candleStyle.upColor": CANDLE_UP,
+        "mainSeriesProperties.candleStyle.downColor": CANDLE_DOWN,
+        "mainSeriesProperties.candleStyle.borderUpColor": CANDLE_UP,
+        "mainSeriesProperties.candleStyle.borderDownColor": CANDLE_DOWN,
+        "mainSeriesProperties.candleStyle.wickUpColor": CANDLE_UP,
+        "mainSeriesProperties.candleStyle.wickDownColor": CANDLE_DOWN,
+      },
     }
   );
 }
@@ -202,6 +233,10 @@ export function MissionDeck() {
                   Macro
                 </span>
                 <span className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#4fd1c5] shadow-[0_0_6px_rgba(79,209,197,0.8)]" />
+                  FX
+                </span>
+                <span className="flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#e6a855] shadow-[0_0_6px_rgba(230,168,85,0.8)]" />
                   Commodity
                 </span>
@@ -226,7 +261,7 @@ export function MissionDeck() {
             />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-px bg-white/[0.04]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-px bg-white/[0.04]">
             {TILES.map((tile) => {
               const accent = GROUP_ACCENT[tile.group];
               return (
@@ -235,7 +270,7 @@ export function MissionDeck() {
                   onClick={() => setOpenTile(tile)}
                   className="relative bg-[#07090d] hover:bg-white/[0.015] transition-colors text-left group"
                   style={{
-                    height: 140,
+                    height: 160,
                     boxShadow: `inset 0 2px 0 0 ${accent}`,
                   }}
                 >
@@ -249,7 +284,7 @@ export function MissionDeck() {
                   />
                   <iframe
                     title={tile.label}
-                    srcDoc={buildMiniChartDoc(tile.symbol)}
+                    srcDoc={buildTileChartDoc(tile)}
                     sandbox="allow-scripts allow-same-origin allow-popups"
                     className="w-full h-full border-0 block pointer-events-none"
                   />
