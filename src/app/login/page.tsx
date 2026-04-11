@@ -14,7 +14,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md flex flex-col items-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/marcus financial.png"
+          src="/marcus%20financial.png"
           alt="marcus.financial"
           width={417}
           height={119}
