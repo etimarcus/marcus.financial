@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 type HeatmapKind = "stocks" | "crypto";
@@ -128,28 +128,29 @@ function HeatmapModal({
   kind: HeatmapKind;
   onClose: () => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const cfg = CONFIG[kind];
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.innerHTML = "";
-    const inner = document.createElement("div");
-    inner.className = "tradingview-widget-container__widget";
-    inner.style.height = "100%";
-    inner.style.width = "100%";
-    container.appendChild(inner);
-    const script = document.createElement("script");
-    script.src = cfg.script;
-    script.type = "text/javascript";
-    script.async = true;
-    script.innerHTML = JSON.stringify(cfg.widget);
-    container.appendChild(script);
-    return () => {
-      container.innerHTML = "";
-    };
-  }, [cfg]);
+  const srcDoc = useMemo(
+    () => `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; width: 100%; background: #07090d; }
+  .tradingview-widget-container, .tradingview-widget-container__widget { height: 100%; width: 100%; }
+</style>
+</head>
+<body>
+<div class="tradingview-widget-container">
+  <div class="tradingview-widget-container__widget"></div>
+  <script type="text/javascript" src="${cfg.script}" async>
+  ${JSON.stringify(cfg.widget)}
+  </script>
+</div>
+</body>
+</html>`,
+    [cfg]
+  );
 
   return (
     <div
@@ -181,7 +182,12 @@ function HeatmapModal({
             </svg>
           </button>
         </div>
-        <div ref={containerRef} className="tradingview-widget-container h-full w-full" />
+        <iframe
+          title={cfg.label}
+          srcDoc={srcDoc}
+          sandbox="allow-scripts allow-same-origin allow-popups"
+          className="h-full w-full border-0"
+        />
       </div>
     </div>
   );
