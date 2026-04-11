@@ -156,6 +156,11 @@ export function ChatInterface() {
   function send() {
     const text = input.trim();
     if (!text) return;
+    if (text.toLowerCase() === "clear chat") {
+      setInput("");
+      setMessages([]);
+      return;
+    }
     setInput("");
     sendWith(text);
   }
@@ -197,11 +202,6 @@ export function ChatInterface() {
     );
   }
 
-  function clear() {
-    if (!confirm("Clear chat history?")) return;
-    setMessages([]);
-  }
-
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-white/[0.06] bg-[#07090d]/90 backdrop-blur px-4 py-3">
@@ -224,7 +224,7 @@ export function ChatInterface() {
             onClick={send}
             disabled={pending || !input.trim()}
             aria-label="Send"
-            className="flex-shrink-0 disabled:opacity-30 transition-opacity hover:opacity-80"
+            className="flex-shrink-0"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -234,14 +234,6 @@ export function ChatInterface() {
               height={44}
               className="h-11 w-11"
             />
-          </button>
-        </div>
-        <div className="mt-2 flex justify-end">
-          <button
-            onClick={clear}
-            className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 hover:text-zinc-200 transition-colors"
-          >
-            Clear
           </button>
         </div>
       </div>
@@ -269,7 +261,7 @@ export function ChatInterface() {
           ))}
 
           {pending && messages[messages.length - 1]?.text === "" && (
-            <div className="flex items-center gap-2 text-[11px] text-zinc-500 pl-10 font-mono">
+            <div className="flex items-center gap-2 text-[11px] text-zinc-500 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
               thinking…
             </div>
@@ -297,10 +289,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   return (
-    <div className="flex justify-start gap-2">
-      <div className="flex-shrink-0 h-7 w-7 rounded-md bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center text-black font-bold text-xs shadow-[0_0_12px_rgba(86, 118, 220,0.3)]">
-        m
-      </div>
+    <div className="flex justify-start">
       <div className="flex-1 min-w-0 space-y-1.5 pt-0.5">
         {message.toolCalls.length > 0 && (
           <div className="space-y-1">
