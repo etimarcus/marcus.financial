@@ -53,10 +53,6 @@ export default function LoginPage() {
             {pending ? "Authenticating…" : "Sign in"}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-[10px] text-zinc-600 font-mono uppercase tracking-widest">
-          Paper trading · Alpaca · Opus 4.6
-        </p>
       </div>
     </main>
   );
