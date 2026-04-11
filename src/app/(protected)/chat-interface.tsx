@@ -230,9 +230,9 @@ export function ChatInterface() {
             <img
               src="/wise-eye.png"
               alt=""
-              width={44}
-              height={44}
-              className="h-11 w-11"
+              width={48}
+              height={48}
+              className="h-12 w-12"
             />
           </button>
         </div>
