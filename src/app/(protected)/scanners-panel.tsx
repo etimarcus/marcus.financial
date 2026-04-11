@@ -6,6 +6,7 @@ import {
   setScannerInterval,
   runScannerNow,
   runResearch,
+  runGlassnodeSnapshot,
 } from "./actions";
 
 export type ScannerRow = {
@@ -108,6 +109,18 @@ export function ScannersPanel({ scanners, recentRuns }: ScannersPanelProps) {
     });
   }
 
+  function handleGlassnode() {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await runGlassnodeSnapshot();
+      setFeedback(
+        result.ok
+          ? { ok: true, message: result.message ?? "Done." }
+          : { ok: false, message: result.error ?? "Failed." }
+      );
+    });
+  }
+
   return (
     <section>
       <h2 className="text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 mb-2">
@@ -161,6 +174,33 @@ export function ScannersPanel({ scanners, recentRuns }: ScannersPanelProps) {
               className="rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
             >
               {isPending ? "…" : "Run research"}
+            </button>
+          </div>
+        </div>
+
+        <div className="pt-5 border-t border-white/[0.06]">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
+                <span className="text-sm font-medium text-zinc-100">
+                  Glassnode snapshot
+                </span>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-600">
+                  on-demand
+                </span>
+              </div>
+              <div className="text-xs text-zinc-500 mt-0.5">
+                On-chain crypto read (BTC/ETH MVRV, SOPR, flows, holder
+                behavior). Saves a markdown report to Insights.
+              </div>
+            </div>
+            <button
+              onClick={handleGlassnode}
+              disabled={isPending}
+              className="flex-shrink-0 rounded-lg bg-accent/10 text-accent-light border border-accent/30 hover:bg-accent/20 hover:border-accent/50 px-3 py-1.5 text-sm font-medium disabled:opacity-50 transition-colors"
+            >
+              {isPending ? "…" : "Run snapshot"}
             </button>
           </div>
         </div>

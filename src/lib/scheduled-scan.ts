@@ -3,7 +3,12 @@ import { getClock } from "./alpaca";
 import { db } from "./db";
 import { runAgent, type AgentEvent } from "./agent";
 
-export type ScannerKey = "alpaca" | "tradingview" | "polymarket" | "finviz";
+export type ScannerKey =
+  | "alpaca"
+  | "tradingview"
+  | "polymarket"
+  | "finviz"
+  | "glassnode";
 
 export type ScanResult = {
   ok: boolean;
@@ -158,6 +163,48 @@ Process:
    - symbols: [array of tickers analyzed]
 6. Do NOT call propose_trade. This is research.
 7. MANDATORY: finish with a one-sentence text summary in your final assistant turn so the run log has context. Even if everything went wrong and you saved nothing, write a sentence explaining what failed and why. Do not end the turn silently — a silent turn shows as "(no summary)" in the dashboard which gives the operator zero information.
+
+Start now.`,
+  },
+
+  glassnode: {
+    key: "glassnode",
+    scheduled: false,
+    requiresMarketOpen: false,
+    bypassWhitelist: true,
+    buildKickoff: ({ now }) => `[Glassnode snapshot · ${now}]
+
+You're producing a point-in-time on-chain snapshot of the crypto market using Glassnode as the primary lens. This is RESEARCH — do NOT call propose_trade. Save findings via save_insight.
+
+Process:
+1. Use web_fetch and web_search against glassnode.com, studio.glassnode.com, insights.glassnode.com, and Glassnode's public "The Week On-Chain" posts to pull the current state of the most load-bearing metrics. Prefer web_fetch on specific Glassnode pages; fall back to web_search for "glassnode <metric> today" or "glassnode BTC MVRV current" style queries when pages gate data.
+2. Anchor your snapshot on Bitcoin (BTC) at minimum. Cover Ethereum (ETH) as well if data is available. Try to pull current readings for:
+   - MVRV Z-score
+   - NUPL (Net Unrealized Profit/Loss) and the accompanying "market phase" label
+   - SOPR (Spent Output Profit Ratio), both the short-term-holder and long-term-holder variants when possible
+   - Realized price vs market price, and the multiple
+   - Exchange net flows (inflows vs outflows over the past 7-30 days)
+   - Stablecoin supply ratio (SSR) or aggregate stablecoin market cap trend
+   - Hash rate / difficulty trend (for BTC)
+   - LTH supply / STH supply split and whether LTH is distributing or accumulating
+   Don't force metrics you can't find — note what you couldn't retrieve and move on.
+3. For each metric you do retrieve, record the exact numeric value, the direction of change over the last week or month when available, and the historical regime it implies (e.g. "MVRV Z-score = 2.4, historically this sits in the 'moderate greed' band").
+4. Form an overall read: is on-chain data currently painting an accumulation picture, a distribution picture, an overheated picture, or a capitulation picture? Be honest about confidence — if the data is mixed, say so.
+5. Save ONE save_insight call with:
+   - source: 'glassnode'
+   - kind: 'market_insight'
+   - title: terse snapshot title (e.g. "Glassnode snapshot — BTC MVRV cooling, LTHs accumulating")
+   - body: a markdown report with these sections:
+     * Headline: 1-2 sentence summary of the overall read
+     * BTC metrics table/list with values + regime labels
+     * ETH metrics (if pulled)
+     * Flows & stablecoins: what money is doing on-chain this week
+     * Holder behavior: LTH vs STH, accumulation vs distribution
+     * What this implies and what would change your mind
+     * Sources: list every URL you actually pulled
+   - symbols: ['BTC', 'ETH'] (only what you actually covered)
+6. Do NOT call propose_trade. This scanner is for situational awareness, not execution.
+7. MANDATORY: finish with a one-sentence text summary in your final assistant turn describing the overall on-chain read. Never end the turn silently.
 
 Start now.`,
   },

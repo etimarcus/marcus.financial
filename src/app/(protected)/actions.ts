@@ -364,3 +364,31 @@ export async function runResearch(
     return { ok: false, error: message };
   }
 }
+
+export async function runGlassnodeSnapshot(): Promise<
+  ActionResult & { result?: ScanResult }
+> {
+  await requireAuth();
+  try {
+    const result = await runScan("glassnode", { force: true });
+    revalidatePath("/");
+    if (!result.ok) {
+      return {
+        ok: false,
+        error: result.error ?? "Glassnode snapshot failed",
+        result,
+      };
+    }
+    return {
+      ok: true,
+      message:
+        result.insights_saved && result.insights_saved > 0
+          ? `Snapshot complete — ${result.insights_saved} report saved.`
+          : "Snapshot complete — no report was saved (check recent runs).",
+      result,
+    };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: message };
+  }
+}
