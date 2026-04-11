@@ -28,14 +28,22 @@ export default async function ProtectedLayout({
       <header className="sticky top-0 z-20 border-b border-zinc-700/60 bg-[#07090d]/80 backdrop-blur-md">
         <div className="flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-3 flex-wrap">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icon.png"
-              alt="marcus.financial shield"
-              width={48}
-              height={48}
-              className="h-12 w-12 drop-shadow-[0_0_12px_rgba(242,214,106,0.25)]"
-            />
+            <a
+              href="https://marcus.pub"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="marcus.pub"
+              className="inline-block"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/icon.png"
+                alt="marcus.financial shield"
+                width={48}
+                height={48}
+                className="h-12 w-12 drop-shadow-[0_0_12px_rgba(242,214,106,0.25)]"
+              />
+            </a>
             <HeaderClock />
             <span className="text-zinc-700">·</span>
             <span className="flex items-center gap-1.5 font-mono text-sm font-semibold uppercase tracking-wider text-zinc-200">
