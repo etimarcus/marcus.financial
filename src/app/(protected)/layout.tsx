@@ -91,19 +91,6 @@ export default async function ProtectedLayout({
         </div>
       </header>
 
-      <div className="flex justify-end px-6 pt-4">
-        <a href="/" aria-label="marcus.financial home" className="inline-block">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="marcus.financial"
-            width={202}
-            height={144}
-            className="h-auto"
-          />
-        </a>
-      </div>
-
       <div className="flex-1">{children}</div>
     </div>
   );
