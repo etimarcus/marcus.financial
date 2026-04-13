@@ -266,7 +266,7 @@ export default async function Dashboard() {
   const dayPnlPct = lastEquity > 0 ? dayPnl / lastEquity : 0;
 
   return (
-    <main className="px-6 pb-10 space-y-6">
+    <main className="px-6 pt-4 pb-10 space-y-6">
       <MissionDeck />
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
